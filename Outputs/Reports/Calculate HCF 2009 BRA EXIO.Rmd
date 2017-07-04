@@ -1,0 +1,48 @@
+---
+title: "Calculate HCF 2009 BRA EXIO"
+author: "Tudeschini"
+date: "June 15, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Objective
+
+Estimate the GHG intensity tables in same form of **BRA_intens_RAS_noVal** (energy). Create both CO2 and non-CO2 emission tables compatible with ICP itens.
+
+### 1. Trace **BRA_intens_RAS_noVal** back:
+
+a. The **Get_nonsigular_mat_for_RAS.R** scritp define
+
+- BRA_inten_RAS_noVal <- SetupSectorIntensities(final_alloc_list_BRA_noVal, NC_BRA_noVal, "BR") # SetupSectorIntensities comes from "Bridge_RAS.R" 
+**SetupSectorIntensities**: Calculate ICP sectoral intensities from given allocation ratio matrix based on random draws (either RASed or non-RASed)
+
+
+final_alloc_list_BRA_noVal <- lapply(result_BRA_noVal, func1)
+
+
+list[result_BRA_noVal, NC_BRA_noVal] <- **Run_rIPFP**(bridge_ICP_EXIO_q[,-1], "BRA")
+- `Bridge_RAS.R`
+
+
+### Bridge_RAS.R
+
+a. The **SetupEmissionIntensities** function:
+Emission intensity in ICP classification
+
+
+### Jun 15 approach:
+
+I used function `SetupEmissionIntensities` to calculate emissions intensities in the following two lines:
+
+
+`BRA_emiss_inten_RAS_noVal <- SetupEmissionIntensities(final_alloc_list_BRA_noVal, NC_BRA_noVal, "BR")`
+`BRA_emiss_inten_nonRAS_noVal <- SetupEmissionIntensities(alloc_nonRAS, NC_BRA_noVal, "BR")`
+
+I still need to understand how this function works and which emissions table is linked (Non-CO2, CO2???)
+
+
+

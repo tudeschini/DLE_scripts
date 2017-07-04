@@ -1,0 +1,36 @@
+---
+title: "rIPFP Steps"
+author: "From Jihoon email"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Files and steps to run rIPFP
+*From Jihoon email: Materials April 28 2017*
+
+- I list down key files to run rIPFP and some other which may be of your interest. I think the first 5 for these are enough for rIPFP, if you can set up inputs properly... There are many lines for initializing survey data, which you can ignore at the beginning.
+
+1.	[.Rprofile](https://github.com/iiasa/DLE_scripts/blob/master/.Rprofile) – Initiation file which is supposed to run when R is starting. (But it doesn’t get run. I haven’t figured out why.) So I run a part of it manually. Includes library initiation and two useful function definitions
+- *Some libraries masks others causing problems in running functions. To solve load the library again.*
+- *In line 66: better run script separetly*
+
+2.	[Init.R](https://github.com/iiasa/DLE_scripts/blob/master/Init.R) – Initialization steps importing DB, defining parameters, etc.
+
+3.	[EXIO_init.R](https://github.com/iiasa/DLE_scripts/blob/master/EXIO_init.R) – Initialization specifically for EXIO read-in
+
+4.	[Bridge_RAS.R](https://github.com/iiasa/DLE_scripts/blob/master/Bridge_RAS.R) – All the functions required for rIPFP
+
+5.	[Bridging_uncertainty.R](https://github.com/iiasa/DLE_scripts/blob/master/Bridging_uncertainty.R) – Function generating the random initial matrices for rIPFP
+
+6.	[Get_nonsigular_mat_for_RAS.R](https://github.com/iiasa/DLE_scripts/blob/master/Get_nonsigular_mat_for_RAS.R) – Actually running rIPFP process
+
+7.	[Map_CES_COICOP.R](https://github.com/iiasa/DLE_scripts/blob/master/Map_CES_COICOP.R) – Based on the WB mapping, create the mapping matrix between surveys and COICOP
+
+8.	[Map_UN_ISIC_CPC_COICOP.R](https://github.com/iiasa/DLE_scripts/blob/master/Map_UN_ISIC_CPC_COICOP.R) – Merge UN correspondence tables to get COICOP-ISIC mapping. After this some manual manipulation required for the matrix.
+
+-	In the end, I get “COICOIP_EXIO_Qual_UN_Edited.xlsx”. The Q matrix in the paper
+
+9.	[Generate_base_ICP-EXIO_mapping.R](https://github.com/iiasa/DLE_scripts/blob/master/Generate_base_ICP-EXIO_mapping.R) – dealing with the difference between ICP used by WB and COICOP used by UN correspondence table.
+
+10.	[Valuation.R](https://github.com/iiasa/DLE_scripts/blob/master/Valuation.R) – Valuation matrix derivation
