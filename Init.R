@@ -1,5 +1,7 @@
 # This file needs to be run once at the very beginning of an analysis
 
+setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/")
+code_path <- "C:/Users/tudeschi/Documents/DLE_scripts/"
 
 #################
 ### Constants ###
@@ -18,10 +20,10 @@ draw_count <- 1
 options(digits=3)
 
 # DLE DB in PPP 2010$ (PPP in terms of private consumption)
-# EXIO in MER 2007
+# EXIO in M EUR 2007
 # Need this PPP rate to go back to local currency in 2010
 # [LCU/$]
-PPP_cty = WDI(country = c("IN", "BR"), indicator = c("PA.NUS.PPP", "PA.NUS.PRVT.PP"), start = 2010, end = 2010, extra = FALSE, cache = NULL)
+PPP_cty = WDI(country = c("IN", "BR"), indicator = c("PA.NUS.PPP", "PA.NUS.PRVT.PP"), start = 2010, end = 2010, extra = FALSE, cache = NULL) # Load PPP conversion rates from WB database
 PPP_IND <- as.numeric(PPP_cty %>% filter(country=="India") %>% select(PA.NUS.PRVT.PP) )
 PPP_BRA <- as.numeric(PPP_cty %>% filter(country=="Brazil") %>% select(PA.NUS.PRVT.PP) )
 
@@ -33,8 +35,8 @@ CPI_ratio_IND <- as.numeric(CPI %>% filter(year==2010 & iso2c=='IN') %>% select(
 CPI_ratio_BRA <- as.numeric(CPI %>% filter(year==2010 & iso2c=='BR') %>% select(FP.CPI.TOTL) / CPI %>% filter(year==2007 & iso2c=='BR') %>% select(FP.CPI.TOTL))
 
 
-# Exchange rate (MER) [LCU/$]
-EXR_EUR <- WDI(country = "XC", indicator = "PA.NUS.FCRF", start = 2007, end = 2007, extra = FALSE, cache = NULL)
+# Exchange rate (MEUR) [LCU/$]
+EXR_EUR <- WDI(country = "XC", indicator = "PA.NUS.FCRF", start = 2007, end = 2007, extra = FALSE, cache = NULL) # XC == euro zone
 EXR_EUR <- EXR_EUR %>% rename(r=PA.NUS.FCRF)
 EXR_cty <- WDI(country = c("IN", "BR"), indicator = "PA.NUS.FCRF", start = 2007, end = 2007, extra = FALSE, cache = NULL)
 EXR_IND <- as.numeric(EXR_cty %>% filter(country=="India") %>% select(PA.NUS.FCRF))
@@ -44,13 +46,13 @@ EXR_BRA <- as.numeric(EXR_cty %>% filter(country=="Brazil") %>% select(PA.NUS.FC
 HH_CON <- WDI(country = c("IN", "BR"), indicator = c("NE.CON.PETC.CD", "NE.CON.PRVT.CD", "NE.CON.PETC.CN", "NE.CON.PRVT.KD"), 
               start = 2004, end = 2011, extra = FALSE, cache = NULL)
 BRA_con_grwth <- as.numeric(HH_CON %>% filter(year==2008 & iso2c=='BR') %>% select(NE.CON.PRVT.KD) / 
-                              HH_CON %>% filter(year==2007 & iso2c=='BR') %>% select(NE.CON.PRVT.KD))
+                              HH_CON %>% filter(year==2007 & iso2c=='BR') %>% select(NE.CON.PRVT.KD)) # consumption growth between 2007 and 2008 >>> Why 2008?
 IND_con_grwth <- as.numeric(HH_CON %>% filter(year==2011 & iso2c=='IN') %>% select(NE.CON.PRVT.KD) / 
                               HH_CON %>% filter(year==2007 & iso2c=='IN') %>% select(NE.CON.PRVT.KD))
 IND2_con_grwth <- as.numeric(HH_CON %>% filter(year==2004 & iso2c=='IN') %>% select(NE.CON.PRVT.KD) / 
                               HH_CON %>% filter(year==2007 & iso2c=='IN') %>% select(NE.CON.PRVT.KD))
 
-WDI(country = c("IN", "BR"), indicator = c("NE.IMP.GNFS.ZS", "NE.EXP.GNFS.ZS"), start = 2007, end = 2007, extra = FALSE, cache = NULL)
+# WDI(country = c("IN", "BR"), indicator = c("NE.IMP.GNFS.ZS", "NE.EXP.GNFS.ZS"), start = 2007, end = 2007, extra = FALSE, cache = NULL)
 
 #####################################################
 ### Read in (CES-Pseudo COICOP) mappings from WB  ###
@@ -58,7 +60,7 @@ WDI(country = c("IN", "BR"), indicator = c("NE.IMP.GNFS.ZS", "NE.EXP.GNFS.ZS"), 
 
 ### Read in ICP heading number following NTNU 109 mapping (not 100%, some ICP headings are aggregated) ###
 Mapping <- system.file("ICP_SEQ.xlsx", package = "XLConnect")
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/Worldbank/ICP_SEQ.xls")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/Worldbank/ICP_SEQ.xls")
 # I added 'Sheet2' and fixed some mis-categorizations for my needs.
 icp_seq <- XLConnect::readWorksheet(wb, sheet="Sheet2", header=TRUE, startRow=2, startCol=1, endCol=1, forceConversion=T)
 icp_cat <- XLConnect::readWorksheet(wb, sheet="Sheet2", header=FALSE, startRow=3, startCol=3, endCol=4, forceConversion=T)
@@ -67,7 +69,7 @@ icp_ntnu <-cbind(icp_seq, icp_cat, NTNU)
 names(icp_ntnu)[2:3] <- c("COICOP1","COICOP2")
 names(icp_ntnu)[5] <- "ICP_Heading"
 
-source("Process_WB.R")  # Read in the function 'processWBscript' and resulting mtxs for 4 countries
+source(paste0(code_path, "Process_WB.R"))  # Read in the function 'processWBscript' and resulting mtxs for 4 countries
 
 # Issue: I still need to match with our CES DB and final NTNU 109 classification
 #        How to combine fuel consumption and other (food etc)
@@ -83,8 +85,8 @@ source("Process_WB.R")  # Read in the function 'processWBscript' and resulting m
 n_sector_coicop <- 109
 
 # Mapping <- system.file("COICOP3_EXIO_bridge.xlsx", package = "XLConnect")
-# wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Uncertainty/COICOP3_EXIO_bridge.xlsx")
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/COICOIP_EXIO_Qual_UN_Edited.xlsx")
+# wb <- XLConnect::loadWorkbook("Uncertainty/COICOP3_EXIO_bridge.xlsx")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/COICOIP_EXIO_Qual_UN_Edited.xlsx")
 
 # Qualitative mapping (0 or 1)
 # bridge_COICOP_EXIO_q <- XLConnect::readWorksheet(wb, sheet="Qual_DK+FR", header=FALSE, 
@@ -110,7 +112,7 @@ EX_catnames <- XLConnect::readWorksheet(wb, sheet="COICOIP_EXIO_Qual_UN", header
 
 # Takes long time to run. 
 # Some .Rda files are already created to save time.
-# source("EXIO_init.R")
+source(paste0(code_path, "EXIO_init.R"))
 
 
 
@@ -118,7 +120,7 @@ EX_catnames <- XLConnect::readWorksheet(wb, sheet="COICOIP_EXIO_Qual_UN", header
 ### Read in function 'get_basic_price' ###
 ##########################################
 
-source("Valuation.R")
+source(paste0(code_path, "Valuation.R"))
 
 
 
@@ -128,7 +130,7 @@ source("Valuation.R")
 
 # The uniform random draw routine based on a qual mapping
 
-source("Bridging_uncertainty.R")  
+source(paste0(code_path, "Bridging_uncertainty.R"))  
 
 
 
@@ -136,7 +138,7 @@ source("Bridging_uncertainty.R")
 ###     Treating CES fuel sectors differently     ###
 #####################################################
 
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/CES_fuel_EXIO.xlsx")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/CES_fuel_EXIO.xlsx")
 bridge_fuel_EXIO_q  <- XLConnect::readWorksheet(wb, "Sheet1", header=TRUE, forceConversion=T, 
                                                 startRow=2, startCol=3, endCol=202) 
 DLE_fuel_sector_Q  <- XLConnect::readWorksheet(wb, "Sheet2", header=TRUE, forceConversion=T, 
@@ -153,13 +155,13 @@ names(DLE_fuelnames_std) <- "item"
 ############################################################
 ### Read final demand vector from each country's CES DB  ###
 ############################################################
-source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/00 Load required packages.R")
-source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/01 Load generic helper functions.R")
-source("P:/ene.general/DecentLivingEnergy/Surveys/Generic function to access database.R")
-source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/Functions for building Oracle DB tables.R")
+# source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/00 Load required packages.R")
+# source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/01 Load generic helper functions.R")
+source(paste0(code_path, "Generic function to access database.R"))
+# source("P:/ene.general/DecentLivingEnergy/Surveys/Scripts/Functions for building Oracle DB tables.R")
 
-source("Read_final_demand_from_DB.R")
-source("Read_direct_energy_from_DB.R")
+source(paste0(code_path, "Read_final_demand_from_DB.R"))
+source(paste0(code_path, "Read_direct_energy_from_DB.R"))
 
 # Read total FD for all population
 # dim: n_CES_sector x 2 (or 11 for deciles)
@@ -170,13 +172,11 @@ DLE_fuel_types <- ConstructyFuelTypeSet() %>% arrange(fuel)
 # India
 IND_HH_Alldata <-selectDBdata(tables='IND1_HH')
 IND_FOOD_Alldata <-selectDBdata(tables='IND1_FOOD')
-save(IND_HH_Alldata, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND1_HH_All.Rda")
-save(IND_FOOD_Alldata, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND1_Food_All.Rda")
+save(IND_HH_Alldata, file="DLE_scripts/Saved tables/IND1_HH_All.Rda")
+save(IND_FOOD_Alldata, file="DLE_scripts/Saved tables/IND1_Food_All.Rda")
 
 IND_FD <- readFinalDemandfromDBbyDecile('IND1')
 IND2_FD <- readFinalDemandfromDBbyDecile('IND2')
-BRA_FD <- readFinalDemandfromDBbyDecile('BRA0')
-BRA1_FD <- readFinalDemandfromDBbyDecile('BRA1')
 
 list[IND_FD_ALL, IND_HH] <- readFinalDemandfromDBAllHH('IND1')
 IND_FD_ALL <- data.table(IND_FD_ALL)
@@ -188,19 +188,29 @@ IND2_FD_ALL <- data.table(IND2_FD_ALL)
 IND2_HH <- data.table(IND2_HH, key="hhid")
 setorder(IND2_HH, hhid)
 
+# Brazil
+
+BRA_FD <- readFinalDemandfromDBbyDecile('BRA0')
+BRA1_FD <- readFinalDemandfromDBbyDecile('BRA1')
+
 list[BRA_FD_ALL, BRA_HH] <- readFinalDemandfromDBAllHH('BRA0')
 BRA_FD_ALL <- data.table(BRA_FD_ALL)
-BRA_HH <- data.table(BRA_HH, key="hhid")
+BRA_HH <- data.table(BRA_HH, key="hhid") # 55970x8 - hhid, income, size, decile, cumpop(?)
 setorder(BRA_HH, hhid)
 
-save(IND_FD_ALL, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND_AllHHConsump.Rda")
-# save(IND_FD_ALL, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND_AllHHConsump_prcadj.Rda")
-save(IND2_FD_ALL, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND2_AllHHConsump.Rda")
-save(BRA_FD_ALL, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/BRA_AllHHConsump.Rda")
-save(IND_HH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND_HH.Rda")
-save(IND2_HH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND2_HH.Rda")
-save(BRA_HH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/BRA_HH.Rda")
+save(IND_FD_ALL, file="DLE_scripts/Saved tables/IND_AllHHConsump.Rda")
+# save(IND_FD_ALL, file="DLE_scripts/Saved tables/IND_AllHHConsump_prcadj.Rda")
+save(IND2_FD_ALL, file="DLE_scripts/Saved tables/IND2_AllHHConsump.Rda")
+save(BRA_FD_ALL, file="DLE_scripts/Saved tables/BRA_AllHHConsump.Rda")
+save(IND_HH, file="DLE_scripts/Saved tables/IND_HH.Rda")
+save(IND2_HH, file="DLE_scripts/Saved tables/IND2_HH.Rda")
+save(BRA_HH, file="DLE_scripts/Saved tables/BRA_HH.Rda")
 
+# Save in locally
+
+saveRDS(BRA_FD_ALL, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_AllHHConsump.Rda") # 108 products by 55970 households(observations)
+
+saveRDS(BRA_HH, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_HH.Rda") # 55970 households(observations) and socioeconomic variables 
 
 
 
@@ -214,8 +224,8 @@ save(BRA_HH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/BRA_HH.Rda")
 # IND_FD_ICP <- t(CES_ICP_IND) %*% as.matrix(IND_FD_code[,2])
 # to get FD in ICP classification.
 
-source("Map_CES_COICOP.R")
-source("Init_consumption_vectors.R")
+source(paste0(code_path, "Map_CES_COICOP.R"))
+source(paste0(code_path, "Init_consumption_vectors.R")) # NOT WORKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
@@ -226,7 +236,7 @@ source("Init_consumption_vectors.R")
 # This is already excuted and saved in a file.
 # Don't need to run everytime.
 
-source("Generate_base_ICP-EXIO_mapping.R")
+source(paste0(code_path, "Generate_base_ICP-EXIO_mapping.R"))
 n_sector_icp <- 151  # Num of ICP sectors
 n_sector_icp_fuel <- n_sector_icp + dim(DLE_fuelnames_std)[1]
 
@@ -244,10 +254,10 @@ n_sector_icp_fuel <- n_sector_icp + dim(DLE_fuelnames_std)[1]
 #   2. Some positive EXIO FD values do not match to any ICP sectors. (e.g. stone from EXIO mapped to household maintenance in ICP)
 #     => can be checked by cbind(names(qual_map)[colConst_init!=0 & colSums(qual_map_init)==0], colConst_init[colConst_init!=0 & colSums(qual_map_init)==0])
 
-# wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/ICP_EXIO_Qual_Edited.xlsx")
+# wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/ICP_EXIO_Qual_Edited.xlsx")
 # bridge_ICP_EXIO_q  <- XLConnect::readWorksheet(wb, "ICP_EXIO_Q_nochange", header=TRUE, forceConversion=T, endRow=152, endCol=201) 
 
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/ICP_EXIO_Qual_UN_Edited.xlsx")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/ICP_EXIO_Qual_UN_Edited.xlsx")
 bridge_ICP_EXIO_q  <- XLConnect::readWorksheet(wb, "ICP_EXIO_Qual_UN2", header=TRUE, 
                                                forceConversion=T, endCol=201) 
 ICP_catnames <- bridge_ICP_EXIO_q[,1]
@@ -258,7 +268,7 @@ ICP_catnames <- bridge_ICP_EXIO_q[,1]
 ###    Set up environment for RAS run      ###
 ##############################################
 
-source("Bridge_RAS.R")
+source(paste0(code_path, "Bridge_RAS.R"))
 
 
 
@@ -283,7 +293,7 @@ BRA_idx_ex <- seq(200*(BRA_place-1)+1, 200*BRA_place)   # 7 final demand columns
 # BRA_fd_ex <- matrix(final_demand[,BRA_idx_fd[1]], nrow=200)
 # BRA_fd_exio <- rowSums(BRA_fd_ex) # Sum all HH FD across countries
 # BRA_fd_exio_imp <- rowSums(BRA_fd_ex[,-BRA_place]) # Sum all HH FD across countries
-BRA_fd_ex <- read_excel("H:/MyDocuments/IO work/Valuation/BR_output.xls", sheet="usebptot", skip=14, col_names=FALSE)
+BRA_fd_ex <- read_excel("Valuation/BR_output.xls", sheet="usebptot", skip=14, col_names=FALSE)
 # Issue: Brazil FD has zero education expediture. (reasons unknown)
 # Simply replace the zero with the values found on actual BRA IO 
 BRA_fd_exio <- as.matrix(BRA_fd_ex[1:200,169]) 

@@ -3,7 +3,7 @@
 #####################
 
 # Expenditure in cells
-n_draw <- 1000
+n_draw <- 10
 
 # D_val_uncertainty <- 1
 # list[result_IND, NC_IND] <- Run_rIPFP(bridge_ICP_EXIO_q[,-1], "IND")
@@ -25,7 +25,7 @@ func1 <- function (x) {
 
 # final_alloc_list_FRA_noVal <- lapply(result_FRA_noVal, func1)
 final_alloc_list_IND_noVal <- lapply(result_IND_noVal, func1)
-final_alloc_list_BRA_noVal <- lapply(result_BRA_noVal, func1)
+final_alloc_list_BRA_noVal <- lapply(result_BRA_noVal, func1) # n number of matrices with allocations from ICP(164) to EXIO(200)
 
 
 
@@ -49,6 +49,16 @@ D_val_uncertainty <- 0
 BRA_inten_RAS_noVal <- SetupSectorIntensities(final_alloc_list_BRA_noVal, NC_BRA_noVal, "BR")
 BRA_inten_nonRAS_noVal <- SetupSectorIntensities(alloc_nonRAS, NC_BRA_noVal, "BR")
 
+
+# Brazil Emissions
+
+BRA_GHG_inten_RAS_noVal <- SetupEmissionIntensities(final_alloc_list_BRA_noVal, NC_BRA_noVal, "BR")
+BRA_GHG_inten_nonRAS_noVal <- SetupEmissionIntensities(alloc_nonRAS, NC_BRA_noVal, "BR")
+
+
+
+
+
 # France
 # D_val_uncertainty <- 1
 alloc_nonRAS <- get_bridge_COICOP_EXIO(bridge_COICOP_EXIO_q[,-1], n_draw)
@@ -68,17 +78,36 @@ IND_inten_RAS_combined_noVal <- IND_inten_RAS_noVal
 IND_inten_RAS_combined_noVal[,no_expense_IND] <- IND_inten_nonRAS_noVal[,no_expense_IND]
 
 no_expense_BRA <- which((rowSums(bridge_ICP_EXIO_q[,-1])!=0) & (BRA_FD_ICP_usd2007[,1]==0))
-no_expense_BRA <- no_expense_BRA[!(no_expense_IND %in% grep("UNBR", ICP_catnames))]   # Remove UNBR items
+no_expense_BRA <- no_expense_BRA[!(no_expense_BRA %in% grep("UNBR", ICP_catnames))]   # Remove UNBR items >>>> Comunicate Jihoon <<<< no_expense_IND
 BRA_inten_RAS_combined_noVal <- BRA_inten_RAS_noVal
-BRA_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_inten_nonRAS_noVal[,no_expense_BRA]
+BRA_GHG_inten_RAS_combined_noVal <- BRA_GHG_inten_RAS_noVal
+
+
+BRA_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_inten_nonRAS_noVal[,no_expense_BRA] # primary energy
+BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] # emissions >>> CO2? non-CO2? >>> kg CO2 eq.
+
+
 
 no_expense_FRA <- which((rowSums(bridge_COICOP_EXIO_q[,-1])!=0) & (FRA_FD_ICP_usd2007[,1]==0))
 FRA_inten_RAS_combined_noVal <- FRA_inten_RAS_noVal
 FRA_inten_RAS_combined_noVal[,no_expense_FRA] <- FRA_inten_nonRAS_noVal[,no_expense_FRA]
 
 
+saveRDS(BRA_FD, "BRA_FD.RDS")
 
+saveRDS(BRA_inten_RAS_noVal, "BRA_inten_RAS_noVal.RDS")
 
+saveRDS(BRA_inten_RAS_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_inten_RAS_noVal.RDS")
+
+saveRDS(BRA_inten_RAS_combined_noVal, "BRA_inten_RAS_combined_noVal.RDS")
+
+saveRDS(BRA_inten_RAS_combined_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_inten_RAS_combined_noVal.RDS")
+
+saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_emiss_inten_RAS_combined_noVal.RDS")
+
+saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/ECOPA/ECOPA Final Task 3/Data/BRA_emiss_inten_RAS_combined_noVal.RDS")
+
+saveRDS(BRA_GHG_inten_RAS_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/ECOPA/ECOPA Final Task 3/Data/BRA_emiss_inten_RAS_noVal.RDS")
 
 
 ####################

@@ -4,7 +4,7 @@
 #        ZAF - Need to consolidate survey 'code' 
 
 # Read code-item mapping for IDN
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/IDN NSES July 2008 CE Codes.xlsx")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/IDN NSES July 2008 CE Codes.xlsx")
 code_item_IDN  <- XLConnect::readWorksheet(wb, "Codes", header=TRUE, forceConversion=T)
 names(code_item_IDN) <- c("CODE", "ITEM_DLE", "UNIT")
 code_item_IDN$UNIT <- NULL
@@ -15,7 +15,7 @@ IDN_WB$ICP_SEQ[c(338, 340, 342, 343)] <- 151
 
 # Read code-item name in DB mapping for IND
 # Theoretically ITEM_DLE could be identical to Surv_Heading, but ITEM_DLE is somehow modified.
-wb <- XLConnect::loadWorkbook("H:/MyDocuments/IO work/Bridging/CES-COICOP/IND NSS 68 2011-2012 CE Codes.xlsx")
+wb <- XLConnect::loadWorkbook("Bridging/CES-COICOP/IND NSS 68 2011-2012 CE Codes.xlsx")
 code_item_IND  <- XLConnect::readWorksheet(wb, "NSS68", header=TRUE, forceConversion=T)
 names(code_item_IND) <- c("CODE", "ITEM_DLE", "UNIT")
 code_item_IND$UNIT <- NULL
@@ -91,3 +91,4 @@ row.names(CES_ICP_IND) <- IND_map$CODE
 # Detect which CES items are classifed to UNBR.
 a <- IDN_map[grep("UNBR", IDN_map$ICP_Heading),]
 a <- IND_map[grep("UNBR", IND_map$ICP_Heading),]
+

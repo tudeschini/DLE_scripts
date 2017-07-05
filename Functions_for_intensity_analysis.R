@@ -88,6 +88,37 @@ IndirecIntensitiesByICPSect <- function(sect_idx, cty) {
   return(comp)
 }
 
+# GHG emissions
+
+IndirecIntensitiesByICPSect_GHG <- function(sect_idx, cty) {
+  
+  # sect_idx <- grep(ICP_sect_name, ICP_catnames, ignore.case = TRUE)
+  print(ICP_catnames[sect_idx])
+  map_idx <- which(bridge_ICP_EXIO_q[sect_idx,-1]==1)
+  cty_alloc <- eval(parse(text=paste0(countrycode(cty,"iso2c", "iso3c"), "_alloc")))
+  sect_alloc <- do.call("rbind", lapply(cty_alloc, '[', sect_idx,))
+  
+  cty_place <- which(exio_ctys==cty)
+  # cty_idx_fd <- seq(7*(cty_place-1)+1, 7*cty_place)   # 7 final demand columns per country
+  # cty_idx <- seq(200*(cty_place-1)+1, 200*cty_place)  # 200 EXIO commodities per country
+  
+  all_bp_idx <- c(map_idx, trd_idx, trp_idx)
+  own_ex_idx <- (cty_place-1)*200 + all_bp_idx
+  alloc <- apply(sect_alloc[,all_bp_idx], 2, mean)
+  
+  indirec.int <- colSums(indirect_GHG_int[,own_ex_idx]) * EXR_EUR$r  # kg CO2eq/USD2007
+  direc.int <- colSums(emission_int[,own_ex_idx]) * EXR_EUR$r  # kg CO2eq/USD2007
+  
+  comp <- rbind(as.integer(all_bp_idx), indirec.int, direc.int, alloc)
+  
+  print(map_idx)
+  print(comp)  # MJ/Eur
+  
+  return(comp)
+}
+
+
+
 
 # Get by-decile summary (mean,sd) of any eHH
 SummarizeGJPerCapByDecile <- function(eHH) {

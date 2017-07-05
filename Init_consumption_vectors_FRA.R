@@ -64,6 +64,52 @@ for (i in exio_ctys) {
 
 
 
+##########################################
+### Adjust FD based on the indicators  ###
+##########################################
+
+
+
+####  GHG emissions
+
+
+#### 3.1 France - Inflation 
+
+# This is in 109 NTNU COICOP classifications.
+a <- WDI(country = "FR", indicator = "NE.CON.PETC.KD", start = 2007, end = 2011, extra = FALSE, cache = NULL)
+consumption_growth_FR <- a$NE.CON.PETC.KD[1]/a$NE.CON.PETC.KD[5]
+FRA_FD_ICP_usd2007 <- as.matrix(fd_decile_FRA / CPI_ratio_FRA) / consumption_growth_FR # M.EUR to M.USD 2007 [length: 109]
+
+GetTotalEmbeddedGHG <- function(country='IN') {
+  
+  if(country=='ALL') {
+    cty_idx_fd <- 1:dim(final_demand)[2]
+  }
+  else {
+    cty_place <- which(exio_ctys==country)
+    cty_idx <- seq(200*(cty_place-1)+1, 200*cty_place)  # 200 EXIO commodities per country
+    cty_idx_fd <- seq(7*(cty_place-1)+1, 7*cty_place)   # 7 final demand columns per country
+  }
+  
+  emb_GHG <- indirect_GHG_int %*% as.matrix(final_demand[,cty_idx_fd])
+  emb_GHG <- cbind(emb_GHG, rowSums(emb_GHG))
+  
+  # country <- countrycode(country, "iso2c", "iso3c")
+  # pop2007 <- eval(parse(text=paste0(country, "_pop_2007")))
+  
+  # return(colSums(emb_energy)/pop2007*1000)  # in GJ/capita
+  return(colSums(emb_GHG))  # in TJ
+}
+
+global_total <- 0
+for (i in exio_ctys) {
+  country_total <- GetTotalEmbeddedGHG(i)[8]
+  global_total <- global_total + country_total
+  print(paste0(i, ' ', country_total))
+}
+
+
+
 #########################################
 ### Get EXIO FD vectors for countries ###
 #########################################

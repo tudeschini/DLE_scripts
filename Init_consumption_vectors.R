@@ -122,7 +122,7 @@ IND_FD_ICP_AllHH <- IND_FD_AllHH_2011 / IND_con_grwth   # to USD 2007 (MER)   # 
 BRA_FD <- data.frame(item=ICP_catnames) %>% left_join(BRA_FD)  # Join to make items consistent with the standardized names and order
 BRA_FD[is.na(BRA_FD)] <- 0
 BRA_FD_ICP_usd2007 <- as.matrix(BRA_FD[,2:12] * PPP_BRA / CPI_ratio_BRA / EXR_BRA / 1e6 / BRA_con_grwth) # to M.USD 2007
-BRA1_FD_ICP_usd2007 <- cbind(BRA1_FD[,1], as.matrix(BRA1_FD[,2:12] * PPP_BRA / CPI_ratio_BRA / EXR_BRA / 1e6 / BRA_con_grwth)) # to M.USD 2007
+# BRA1_FD_ICP_usd2007 <- cbind(BRA1_FD[,1], as.matrix(BRA1_FD[,2:12] * PPP_BRA / CPI_ratio_BRA / EXR_BRA / 1e6 / BRA_con_grwth)) # to M.USD 2007
 
 # FD for all households
 BRA_FD_ICP_AllHH <- data.frame(item=ICP_catnames) %>% left_join(BRA_FD_ALL)
@@ -131,8 +131,11 @@ BRA_FD_ICP_AllHH <- as.matrix(BRA_FD_ICP_AllHH[,-1]) * PPP_BRA / CPI_ratio_BRA /
 BRA_FD_ICP_AllHH[is.na(BRA_FD_ICP_AllHH)] <- 0
 
 save(IND_FD_ICP_AllHH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND_FD_harmonized.Rda")
-save(BRA_FD_ICP_AllHH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/BRA_FD_harmonized.Rda")
+# save(BRA_FD_ICP_AllHH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/BRA_FD_harmonized.Rda")
 
+save(BRA_FD_ICP_AllHH, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_FD_harmonized.Rda") # 164x55970 - Consumption of ICP products by household in USD 2007
+
+saveRDS(BRA_FD_ICP_AllHH, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_FD_harmonized.RDS")
 
 # Set Scalers
 scaler_IND <- sum(IND_FD_ICP_usd2007[,1]) / sum(get_purch_price(IND_fd_exio, "IN"))
