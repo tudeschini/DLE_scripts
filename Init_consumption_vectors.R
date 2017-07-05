@@ -135,7 +135,7 @@ save(IND_FD_ICP_AllHH, file="H:/MyDocuments/IO work/DLE_scripts/Saved tables/IND
 
 save(BRA_FD_ICP_AllHH, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_FD_harmonized.Rda") # 164x55970 - Consumption of ICP products by household in USD 2007
 
-saveRDS(BRA_FD_ICP_AllHH, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_FD_harmonized.RDS")
+saveRDS(BRA_FD_ICP_AllHH, file="C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_FD_harmonized.RDS")
 
 # Set Scalers
 scaler_IND <- sum(IND_FD_ICP_usd2007[,1]) / sum(get_purch_price(IND_fd_exio, "IN"))
