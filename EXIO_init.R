@@ -118,7 +118,7 @@ GetSpecificEXIOSectorGHGIntensity <- function(cty, exio_sect) {
   cty_idx_ex <- seq(200*(cty_place-1)+1, 200*cty_place)   # 7 final demand columns per country
   ex_idx <- which(EX_catnames==exio_sect)
   
-  int <- colSums(indirect_GHG_int[,cty_idx_ex])[ex_idx] * EXR_EUR$r   # MJ/EUR to MJ/USD2007
+  int <- colSums(indirect_GHG_int[,cty_idx_ex])[ex_idx] * EXR_EUR$r   # mg CO2eq/EUR to mg CO2eq/USD2007
   
   return(int)
 }

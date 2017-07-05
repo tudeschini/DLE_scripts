@@ -95,19 +95,21 @@ FRA_inten_RAS_combined_noVal[,no_expense_FRA] <- FRA_inten_nonRAS_noVal[,no_expe
 
 saveRDS(BRA_FD, "BRA_FD.RDS")
 
+saveRDS(BRA_FD, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_FD.RDS")
+
 saveRDS(BRA_inten_RAS_noVal, "BRA_inten_RAS_noVal.RDS")
 
-saveRDS(BRA_inten_RAS_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_inten_RAS_noVal.RDS")
+saveRDS(BRA_inten_RAS_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_inten_RAS_noVal.RDS")
 
 saveRDS(BRA_inten_RAS_combined_noVal, "BRA_inten_RAS_combined_noVal.RDS")
 
-saveRDS(BRA_inten_RAS_combined_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_inten_RAS_combined_noVal.RDS")
+saveRDS(BRA_inten_RAS_combined_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_inten_RAS_combined_noVal.RDS")
 
-saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/BRA_emiss_inten_RAS_combined_noVal.RDS")
+saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_emiss_inten_RAS_combined_noVal.RDS")
 
-saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/ECOPA/ECOPA Final Task 3/Data/BRA_emiss_inten_RAS_combined_noVal.RDS")
+saveRDS(BRA_GHG_inten_RAS_combined_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_emiss_inten_RAS_combined_noVal.RDS")
 
-saveRDS(BRA_GHG_inten_RAS_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/ECOPA/ECOPA Final Task 3/Data/BRA_emiss_inten_RAS_noVal.RDS")
+saveRDS(BRA_GHG_inten_RAS_noVal, "C:/Users/tudeschi/OneDrive - IIASA/Projects/PhD/Inputs/Data/EXIO ICP energy and carbon/BRA_emiss_inten_RAS_noVal.RDS")
 
 
 ####################
