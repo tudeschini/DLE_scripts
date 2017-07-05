@@ -382,7 +382,7 @@ SetupEmissionIntensities <- function (mapping_list, not_conv_idx , country = "IN
     # cty_fd <- null_demand_int
     # cty_fd[cty_idx,] <- get_basic_price(fd_exio, country)
     
-    GHG_int <- indirect_GHG_int %*% fd_bp * EXR_EUR$r  # indirect energy use from the supply chains (MJ/USD2007)
+    GHG_int <- indirect_GHG_int %*% fd_bp * EXR_EUR$r  # indirect energy use from the supply chains (mg CO2 eq/USD2007)
     # energy_tot <- indirect_E_int %*% cty_fd
     
     ind_intensity <- rbind(ind_intensity, colSums(GHG_int)) # Total indirect energy/cap by decile

@@ -51,10 +51,10 @@ GHG_item <- emissions$GHG_item
 
 ## Convert all GHG_items to kg CO2 eq
 
-emission_conv = read.csv("C:/Users/tudeschi/Documents/DLE_scripts/Input/Data/Emission metrics_WG1_AR5_EXIOBASE2.3.0.csv") # Convertion factors WG1 AR5
+emission_conv = read.csv("C:/Users/tudeschi/Documents/DLE_scripts/Input/Data/Emission metrics_WG1_AR5_EXIOBASE2.3.0.csv") # Convertion factors WG1 AR5(2013), GWP100 with climate-carbon feedback  
 
 emissions = full_join(emissions, emission_conv) %>% 
-  mutate_each_(funs(. * GWP100_cc), vars(c(2:9601)))  # Multipling all columns by emission conversion factor >>> Now all rows of "emissions" are in kg CO2 eq
+  mutate_each_(funs(. * GWP100_cc), vars(c(2:9601)))  # Multipling all columns by emission conversion factor >>> Now all rows of "emissions" are in kg CO2 eq / M. EUR
 
 emissions <- emissions %>% select(-GHG_item, -GWP100_cc) # The emissions extension has not intensities but total consumptions.
 
@@ -83,7 +83,7 @@ indirect_E_int <- energy_int %*% as.matrix(L_inverse)   # (intensity by sector) 
 
 # indirect emission intensity >>> Modifications 06/17/2017
 
-emission_int <- as.matrix(emissions) %*% diag(y) # The emissions extension has not intensities but total consumptions >>>> divide by total demand
+emission_int <- as.matrix(emissions) %*% diag(y) # The emissions extension has not intensities but total consumptions >>>> divide by total demand >>> kg CO2 eq / M. EUR = mg CO2 eq / EUR
 indirect_GHG_int <- emission_int %*% as.matrix(L_inverse)   # (intensity by sector) * (I-A)^-1
 
 # To clean up the memory

@@ -3,7 +3,7 @@
 #####################
 
 # Expenditure in cells
-n_draw <- 10
+n_draw <- 100
 
 # D_val_uncertainty <- 1
 # list[result_IND, NC_IND] <- Run_rIPFP(bridge_ICP_EXIO_q[,-1], "IND")
@@ -84,7 +84,7 @@ BRA_GHG_inten_RAS_combined_noVal <- BRA_GHG_inten_RAS_noVal
 
 
 BRA_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_inten_nonRAS_noVal[,no_expense_BRA] # primary energy
-BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] # emissions >>> CO2? non-CO2? >>> kg CO2 eq.
+BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] <- BRA_GHG_inten_RAS_combined_noVal[,no_expense_BRA] # emissions >>> mg CO2 eq./ USD 2007
 
 
 

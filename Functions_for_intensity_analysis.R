@@ -106,8 +106,8 @@ IndirecIntensitiesByICPSect_GHG <- function(sect_idx, cty) {
   own_ex_idx <- (cty_place-1)*200 + all_bp_idx
   alloc <- apply(sect_alloc[,all_bp_idx], 2, mean)
   
-  indirec.int <- colSums(indirect_GHG_int[,own_ex_idx]) * EXR_EUR$r  # kg CO2eq/USD2007
-  direc.int <- colSums(emission_int[,own_ex_idx]) * EXR_EUR$r  # kg CO2eq/USD2007
+  indirec.int <- colSums(indirect_GHG_int[,own_ex_idx]) * EXR_EUR$r  # mg CO2eq/USD2007
+  direc.int <- colSums(emission_int[,own_ex_idx]) * EXR_EUR$r  # mg CO2eq/USD2007
   
   comp <- rbind(as.integer(all_bp_idx), indirec.int, direc.int, alloc)
   
