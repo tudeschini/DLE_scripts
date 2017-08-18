@@ -22,7 +22,7 @@
 #    fortunes::fortune()
 
 options(java.parameters = "-Xmx16g") 
-library(RJDBC)
+library(RJDBC) # If any error with rJava go to: https://www.r-statistics.com/tag/rjava/
 library(data.table)
 library(tidyr)
 library(openxlsx)
@@ -48,7 +48,7 @@ library(plotrix)
 library(data.table)
 library(microbenchmark)
 library(ineq)
-library(gdxrrw)
+library(gdxrrw) # Problem > loading
 library(gridExtra)
 library("ggrepel")
 library(colorRamps)
@@ -60,10 +60,11 @@ source_url("https://raw.githubusercontent.com/ggrothendieck/gsubfn/master/R/list
 library(mipfp)
 
 #setwd("H:/MyDocuments/IO work/DLE_scripts")
-setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/")
+setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/Code/")
 
 xlcFreeMemory()
-source("Generic function to access database.R") # Better run the Script directly
+# source("Generic function to access database.R") # Better run the Script directly
+
 
 
 
