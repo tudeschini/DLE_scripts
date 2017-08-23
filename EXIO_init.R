@@ -3,8 +3,11 @@
 
 # setwd("H:/MyDocuments/IO work/")
 
-path_iot <- "C:/Users/tudeschi/SharePoint/DLE - Documents/IO/Data - EXIOBASE/mrIOT_PxP_ita_coefficient_version2.2.2/"
-path_sut <- "C:/Users/tudeschi/SharePoint/DLE - Documents/IO/Data - EXIOBASE/mrSUT_version2.2.2/"
+#path_iot <- "C:/Users/tudeschi/SharePoint/DLE - Documents/IO/Data - EXIOBASE/mrIOT_PxP_ita_coefficient_version2.2.2/"
+path_iot <- "C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/IO/Data - EXIOBASE/mrIOT_PxP_ita_coefficient_version2.2.2/"
+
+# path_sut <- "C:/Users/tudeschi/SharePoint/DLE - Documents/IO/Data - EXIOBASE/mrSUT_version2.2.2/"
+path_sut <- "C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/IO/Data - EXIOBASE/mrSUT_version2.2.2/"
 
 # From IoT folder
 final_demand <- read.table(paste(path_iot, "mrFinalDemand_version2.2.2.txt", sep=""), header=FALSE, sep="\t", dec=".", skip=2)
@@ -35,28 +38,33 @@ materials <- materials[,c(-1,-2)]
 
 #emissions <- read.table(paste(path_iot, "mrEmissions_version2.2.2.txt", sep=""), header=FALSE, sep="\t", dec=".", 
  #                      skip=2, nrows=85, stringsAsFactors = FALSE)
-#emissions <- emissions %>% select(-V2, -V3) %>% filter(grepl('CH4|CO2|N2O', V1)) 
+#emissions <- emissions %>% dplyr::select(-V2, -V3) %>% filter(grepl('CH4|CO2|N2O', V1)) 
 #GHG_item <- emissions$V1
-#emissions <- emissions %>% select(-V1)
+#emissions <- emissions %>% dplyr::select(-V1)
 
 
 ## Emissions from EXIOBASE 2.3 (Changed in 06/16/2017)
 
-path_em <- "C:/Users/tudeschi/SharePoint/DLE - Documents/IO/Data - EXIOBASE/extension2.3.0/"
+path_em <- "C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/IO/Data - EXIOBASE/extension2.3.0/"
 
 emissions <- read.table(paste(path_em, "mrEmissions_pxp_version2.3.0.txt", sep=""), header=FALSE, sep="\t", dec=".", 
                         skip=2, nrows=110, stringsAsFactors = FALSE)
-emissions <- emissions %>% select(-V2, -V3) %>% filter(grepl('CH4|CO2|N2O|HFC|PFC', V1)) %>% rename(GHG_item = V1)  # Emissions table in kg, except for HFC and PFC in Kg CO2 eq.
+emissions <- emissions %>% dplyr::select(-V2, -V3) %>% filter(grepl('CH4|CO2|N2O|HFC|PFC', V1)) %>% rename(GHG_item = V1)  # Emissions table in kg, except for HFC and PFC in Kg CO2 eq.
 GHG_item <- emissions$GHG_item
 
 ## Convert all GHG_items to kg CO2 eq
 
-emission_conv = read.csv("C:/Users/tudeschi/Documents/DLE_scripts/Input/Data/Emission metrics_WG1_AR5_EXIOBASE2.3.0.csv") # Convertion factors WG1 AR5(2013), GWP100 with climate-carbon feedback  
+# emission_conv = read.csv("C:/Users/tudeschi/Documents/DLE_scripts/Input/Data/Emission metrics_WG1_AR5_EXIOBASE2.3.0.csv") # Convertion factors WG1 AR5(2013), GWP100 with climate-carbon feedback  
 
-emissions = full_join(emissions, emission_conv) %>% 
-  mutate_each_(funs(. * GWP100_cc), vars(c(2:9601)))  # Multipling all columns by emission conversion factor >>> Now all rows of "emissions" are in kg CO2 eq / M. EUR
+emission_conv = read.csv("C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/IO/Data - EXIOBASE/Emission metrics_WG1_AR5_EXIOBASE2.3.0.csv") # Convertion factors WG1 AR5(2013), GWP100 with climate-carbon feedback  
 
-emissions <- emissions %>% select(-GHG_item, -GWP100_cc) # The emissions extension has not intensities but total consumptions.
+#emissions = full_join(emissions, emission_conv) %>% 
+  #mutate_each_(funs(. * GWP100_cc), vars(c(2:9601)))  # mutate_each_ was retired
+
+emissions <- full_join(emissions, emission_conv) 
+emissions_tot <- emissions[["GWP100_cc"]] * emissions[c(2:9601)]  # Multipling all columns by emission conversion factor >>> Now all rows of "emissions" are in kg CO2 eq
+# The emissions extension has not intensities but total consumptions.
+emissions <- emissions_tot[c(1:3),] # Just combustion emissions >>> Consistancy check Ago/2017
 
 # From SUT folder
 tot_use <- read.table(paste(path_sut, "mrUse_version2.2.2.txt", sep=""), header=FALSE, sep="\t", dec=".", skip=2)
@@ -87,10 +95,16 @@ emission_int <- as.matrix(emissions) %*% diag(y) # The emissions extension has n
 indirect_GHG_int <- emission_int %*% as.matrix(L_inverse)   # (intensity by sector) * (I-A)^-1
 
 # To clean up the memory
-save(L_inverse, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/L_inverse.Rda")
-save(tot_use, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/tot_use.Rda")
-save(supplym, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/supplym.Rda")
-save(indirect_GHG_int, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/indirect_GHG_int.Rda")
+#save(L_inverse, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/L_inverse.Rda")
+#save(tot_use, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/tot_use.Rda")
+#save(supplym, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/supplym.Rda")
+#save(indirect_GHG_int, file="C:/Users/tudeschi/Documents/DLE_scripts/Outputs/Saved tables/indirect_GHG_int.Rda")
+
+save(L_inverse, file="C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/Outputs/Saved tables/L_inverse.Rda")
+save(tot_use, file="C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/Outputs/Saved tables/tot_use.Rda")
+save(supplym, file="C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/Outputs/Saved tables/supplym.Rda")
+save(indirect_GHG_int, file="C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/Outputs/Saved tables/indirect_GHG_int.Rda")
+
 
 
 rm(L_inverse, tot_use, supplym, materials_reduc)
