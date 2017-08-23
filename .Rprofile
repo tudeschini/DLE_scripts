@@ -21,6 +21,38 @@
 #  if (interactive()) 
 #    fortunes::fortune()
 
+  
+#  install.packages("RJDBC") # If any error with rJava go to: https://www.r-statistics.com/tag/rjava/
+#  install.packages("data.table")
+#  install.packages("tidyr")
+#  install.packages("openxlsx")
+#  install.packages("XLConnect")
+#  install.packages("readxl")
+#  install.packages("ggplot2")
+#  install.packages("stringr")
+#  install.packages("plyr")
+#  install.packages("dplyr")
+#  install.packages("pastecs")
+#  install.packages("countrycode")
+#  install.packages("scatterplot3d")
+#  install.packages("rgl")
+#  install.packages("car")
+#  install.packages("shape")
+#  install.packages("graphics")
+#  install.packages("Surrogate")
+#  install.packages("fields")
+#  install.packages("WDI")
+#  install.packages("qdap")
+#  install.packages("plotrix")
+#  install.packages("microbenchmark")
+#  install.packages("ineq")
+#  install.packages("gdxrrw") # Problem > GDXRRW: Interfacing GAMS and R >> Not necessary now
+#  install.packages("gridExtra")
+#  install.packages("ggrepel")
+#  install.packages("colorRamps")
+#  install.packages("devtools")  # This library needed to do multiple returns from functions  
+  
+  
 options(java.parameters = "-Xmx16g") 
 library(RJDBC) # If any error with rJava go to: https://www.r-statistics.com/tag/rjava/
 library(data.table)
@@ -28,7 +60,6 @@ library(tidyr)
 library(openxlsx)
 library(XLConnect)
 library(readxl)
-library(Surrogate)
 library(ggplot2)
 library(stringr)
 library(plyr)
@@ -48,7 +79,7 @@ library(plotrix)
 library(data.table)
 library(microbenchmark)
 library(ineq)
-library(gdxrrw) # Problem > loading
+library(gdxrrw) # Problem > GDXRRW: Interfacing GAMS and R >> Not necessary now
 library(gridExtra)
 library("ggrepel")
 library(colorRamps)
@@ -60,7 +91,8 @@ source_url("https://raw.githubusercontent.com/ggrothendieck/gsubfn/master/R/list
 library(mipfp)
 
 #setwd("H:/MyDocuments/IO work/DLE_scripts")
-setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/Code/")
+#setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/Code/")
+setwd("C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/")
 
 xlcFreeMemory()
 # source("Generic function to access database.R") # Better run the Script directly
