@@ -84,7 +84,7 @@ ce_code = read_excel("Bridging/CES-COICOP/BRA POF 2008-2009 CE Codes.xlsx") %>%
   # mutate(ICP_SEQ = ifelse(is.na(ICP_SEQ), 0, ICP_SEQ)) %>%   # NAs occur because the WB does not map everything.
   mutate(ICP_item = ifelse(is.na(ICP_SEQ), "Tax, etc.", ICP_catnames[ICP_SEQ])) %>%
   mutate(ICP_item = ifelse(item %in% fuel.items, item, ICP_item)) %>%   # Fuel names do not follow ICP but DLE_DB classification.
-  select(-item) %>% rename(item = ICP_item)
+  dplyr::select(-item) %>% rename(item = ICP_item)
 
 xlsx::write.xlsx(as.data.frame(ce_code), "Bridging/CES-COICOP/BRA POF 2008-2009 CE Codes ICP.xlsx", 
                   col.names=TRUE, row.names=FALSE)
