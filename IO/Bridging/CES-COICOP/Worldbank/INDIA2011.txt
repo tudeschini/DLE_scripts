@@ -1,0 +1,779 @@
+**
+*** Generate commodity-level file  
+**
+
+** Expenditure on food items
+use "$dirdata\NSS68_Sch1-T1_bk_5_6.dta", clear
+keep ID B5_v02 B5_v03 B5_v04 B5_v05 B5_v06 B5_v07
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B5_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (101/106=4)(107 108 110 111=5)(112=8)(113=6)(114/118 120/122=5)
+(129=.)(139=5)(140/148 150/152=32)(159=.)(160=19)(161 162=20)(163=21)
+(164 165=24)(166=36)(167=20)(169=.)(170=37)(171/173=34)(174=36)
+(175=35)(179=.)(180=24)(181/185=25)(189=.)(190=22)(191=16)(192=12)
+(193=10)(194=11)(195=13)(196=9)(199=.)(200=31)(201/208 210/215=30)
+(216=27)(217=29)(219=.)(220/228 230/238=27)(239=.)(240/247=28)(249=.)
+(250/258 260/261=37)(270/277=39)(279=.)(280/284=136)(289=.)(290=7)
+(291=2)(292/294=32)(295=33)(296=37)(299=.)(300/302=37)(309=.)
+(310/317=46)(319=.)(320 321=42)(322=43)(323=45)(324=43)(325=42)
+(329=.)(330 331=65)(332=63)(333=65)(334 335=64)(336=81)(337=65)
+(338=64)(340=65)(341=81)(342=64)(343/345=65)(349=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+preserve
+recode B5_v04 B5_v06 (.=0)
+
+/* sources; 1- Only purchase, 
+			2- Only home-grown stock 
+			3- Both purchase and home-grown stock
+			4- Only free collection 
+			5- Only exchange of goods and services
+			6- Only gifts / charities
+			9- other ; which are considered as purchase in the standardized data file */
+			
+gen cons_csh=0
+gen cons_hmp=0
+gen cons_gft=0
+replace cons_hmp=B5_v04
+replace cons_csh=B5_v06-B5_v04 if B5_v07~=6
+replace cons_gft=B5_v06-B5_v04 if B5_v07==6
+gen cons_test=cons_csh+cons_hmp+cons_gft
+assert cons_test==B5_v06
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+*Annualization (all items are collected with a recall period of 30 days)
+replace cons_csh=(cons_csh/30) * 365
+replace cons_hmp=(cons_hmp/30) * 365
+replace cons_gft=(cons_gft/30) * 365
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B5_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile foods
+save `foods'
+
+restore
+* Computing regional price deflator
+keep ori_hid src_cod B5_v05 B5_v06
+drop if inlist(src_cod,330,345)
+sort ori_hid
+merge ori_hid using "$filehhr", keep(geo_1 rururb)
+
+gen uv=B5_v06/B5_v05 
+egen uv3=median(uv), by (geo_1 rururb src_cod) /* Assumed units are standardized */
+egen uv4=median(uv), by(src_cod)
+
+replace uv3=uv4 if uv3 > 5*uv4 | uv3 < uv4/5
+replace uv3=uv4 if uv3==.
+
+* Total household consumption
+egen totcons=sum(B5_v06), by(ori_hid) 
+gen wi=B5_v06/totcons /* Share of each item */
+gen pindex=wi * uv3/uv4
+
+* Paachse price index for each household
+collapse (sum) pindex, by(ori_hid geo_1 rururb)
+
+* Regional price deflator based on Paachse price indexes
+collapse (median) pindex, by (geo_1 rururb)
+rename pindex reg_defl
+keep geo_1 rururb reg_defl
+
+summ reg_defl
+sort geo_1 rururb
+tempfile defl
+save `defl', replace
+
+** Clothing and footwear
+** Two recall periods were used: 30 and 365 days
+
+* To use the 365 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_7_8.dta", clear
+keep ID B7_v02 B7_v06
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B7_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (350/358 360/368=51)(370=51)(371=71)(372=51)(373 374=50)(375=49)
+(376=51)(379=.)(380=71)(381=69)(382/385=71)(389=.)(390/395=54)(399=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=B7_v06
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B7_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile cloth_footw
+save `cloth_footw' 
+
+/* To use the 30 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_7_8.dta", clear
+keep ID B7_v02 B7_v04
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B7_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (350/358 360/368=51)(370=51)(371=71)(372=51)(373 374=50)(375=49)
+(376=51)(379=.)(380=71)(381=69)(382/385=71)(389=.)(390/395=54)(399=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=(B7_v04/30)*365
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B7_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile cloth_footw
+save `cloth_footw' */
+
+
+** Education and medical (institutional) goods and services 
+** Two recall periods were used: 30 and 365 days
+
+* To use the 365 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_9.dta", clear
+keep ID B9_v02 B9_v04
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B9_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (400/402=133)(403=135)(404=133)(405/408=135)(409=.)(410=87) 
+	(411=94)(412=92)(413=95)(414=91)(419=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=B9_v04
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B9_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile educ_health
+save `educ_health' 
+
+/* To use the 30 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_9.dta", clear
+keep ID B9_v02 B9_v03
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B9_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (400/402=133)(403=135)(404=133)(405/408=135)(409=.)(410=87) 
+	(411=94)(412=92)(413=95)(414=91)(419=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=(B9_v03/30)*365
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B9_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile educ_health
+save `educ_health' */
+
+
+* Miscellaneous goods and services  
+* Note: Residential land rent(code 522) mapped under house rent  
+* The recall period is 30 days
+
+use "$dirdata\NSS68_Sch1-T1_bk_10.dta", clear
+keep ID B10_v02 B10_v03
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B10_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (420=87)(421=94)(422=92)(423=95)(424=91)(429=.)(430 431=131) 
+	(432=130)(433=131)(434=126)(435/437=131)(438=129)(439=.)(440=145)(441 442=79)
+	(443/445=145)(449=.)(450/458=141)(459=.)(460 461=81)(462=79)(463=76)
+	(464 465=76)(466=79)(467 468=81)(470=81)(471=127)(472 473=81)(479=.) 
+	(480/482=82)(483=140)(484/486=83)(487 488=116)(490=114)
+	(491=138)(492 493=151)(494=83)(495=127)(496=116)(497=151)(499=.)(500=109)
+	(501=107)(502 503=108)(504=110)(505/507=112)(508 510 511=103)(512=108)
+	(513=112)(519=.)(520 522=57)(521=137)(523=83)(529=.)(539=57)(540=60)
+	(541 549=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=B10_v03
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+*Annualization
+replace cons_csh=(cons_csh/30) * 365
+replace cons_hmp=(cons_hmp/30) * 365
+replace cons_gft=(cons_gft/30) * 365
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B10_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile misce
+save `misce'
+
+* Durable goods 
+** Two recall periods were used: 30 and 365 days
+
+* To use the 365 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_11.dta", clear
+keep ID B11_v02 B11_v16
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B11_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (550/552=68)(553=145)(554=71)(555=69)(556 557=68)(559=.) 
+	(560/564=119)(565=123)(566=126)(569=.)(570/573=76)(579=.)(580/586=73)
+	(587=74)(588=73)(590 591=74)(592=72)(599=.)(600=100)(601=99)(602=98)(603 604=104)
+	(609=.)(610 611=89)(619=.)(620=144)(621=78)(622=119)(623 624=115)(625=143)
+	(629=.)(630=141)(631=79)(632=58)(633=77)(639=.)(640/643=144)(649=.)(659=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=B11_v16
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B11_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile durableg
+save `durableg' 
+
+/* To use the 30 days option
+
+use "$dirdata\NSS68_Sch1-T1_bk_11.dta", clear
+keep ID B11_v02 B11_v09
+ren ID ori_hid
+format ori_hid %10.0f
+
+ren B11_v02 src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (550/552=68)(553=145)(554=71)(555=69)(556 557=68)(559=.) 
+	(560/564=119)(565=123)(566=126)(569=.)(570/573=76)(579=.)(580/586=73)
+	(587=74)(588=73)(590 591=74)(592=72)(599=.)(600=100)(601=99)(602=98)(603 604=104)
+	(609=.)(610 611=89)(619=.)(620=144)(621=78)(622=119)(623 624=115)(625=143)
+	(629=.)(630=141)(631=79)(632=58)(633=77)(639=.)(640/643=144)(649=.)(659=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+gen cons_csh=B11_v09
+gen cons_hmp=0
+gen cons_gft=0
+recode cons_csh (.=0)
+
+collapse icp_seq (sum) cons_csh cons_hmp cons_gft, by(ori_hid src_cod)
+
+*Annualization
+replace cons_csh=(cons_csh/30) * 365
+replace cons_hmp=(cons_hmp/30) * 365
+replace cons_gft=(cons_gft/30) * 365
+
+egen cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="B11_v02"
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile durableg
+save `durableg' */
+
+
+****MERGING FILES*********
+use `foods', clear
+append using `cloth_footw'
+append using `educ_health'
+append using `misce'
+append using `durableg'
+
+*Add value label 
+# delimit;
+label def src_cod
+101 "rice - PDS"
+102 "rice - other sources"
+103 "chira"
+104 "khoi, lawa"
+105 "muri"
+106 "other rice products"
+107 "wheat/ atta - PDS"
+108 "wheat/ atta - other sources"
+110 "maida"
+111 "suji, rawa"
+112 "sewai, noodles "
+113 "bread (bakery)"
+114 "other wheat products"
+115 "jowar & its products"
+116 "bajra & its products"
+117 "maize & products"
+118 "barley & its products "
+120 "small millets & their products"
+121 "ragi & its products"
+122 "other cereals"
+129 "cereal: sub-total (101-122)"
+139 "cereal substitutes: tapioca, etc"
+/* Pulses & pulse products */
+140 "arhar, tur"
+141 "gram: split"
+142 "gram: whole"
+143 "moong"
+144 "masur"
+145 "urd"
+146 "peas"
+147 "khesari"
+148 "other pulses"
+150 "gram products"
+151 "besan"
+152 "other pulse products"
+159 "pulses & pulse products: s.t. (140-152)"
+/* Milk & milk products */
+160 "milk: liquid (litre)"
+161 "baby food"
+162 "milk: condensed/ powder"
+163 "curd"
+164 "ghee"
+165 "butter"
+166 "ice-cream"
+167 "other milk products"
+169 "milk & milk products: s.t.(160-167)"
+/*salt & sugar*/
+170 "salt"
+171 "sugar - PDS"
+172 "sugar - other sources"
+173 "gur"
+174 "candy, misri"
+175 "honey"
+179 "salt & sugar: s.t. (170-175)"
+/*    Edible oil */
+180 "vanaspati, margarine"
+181 "mustard oil"
+182 "groundnut oil"
+183 "coconut oil"
+184 "refined oil [sunflower, soyabean, saffola, etc.]"
+185 "edible oil: others"
+189 "edible oil: s.t. (180-185)"
+/*    Egg, fish & meat */
+190 "eggs (no.)"
+191 "fish, prawn"
+192 "goat meat/mutton"
+193 "beef/ buffalo meat "
+194 "pork"
+195 "chicken"
+196 "others: birds, crab, oyster, tortoise, etc."
+199 "egg, fish & meat: s.t. (190-196)"
+/*    Vegetables */
+200 "potato"
+201 "onion"
+202 "tomato"
+203 "brinjal"
+204 "radish"
+205 "carrot"
+206 "palak/other leafy vegetables"
+207 "green chillies"
+208 "lady's finger"
+210 "parwal/patal, kundru"
+211 "cauliflower"
+212 "cabbage"
+213 "gourd, pumpkin"
+214 "peas"
+215 "beans, barbati"
+216 "lemon (no.)"
+217 "other vegetables "
+219 "vegetables: s.t. (200-217)"
+/*    Fruits (fresh) */
+220 "banana (no.)"
+221 "jackfruit"
+222 "watermelon"
+223 "pineapple (no.)"
+224 "coconut (no.)"
+225 "green coconut (no.)"
+226 "guava"
+227 "singara"
+228 "orange, mausami (no.)"
+230 "papaya"
+231 "mango"
+232 "kharbooza"
+233 "pears/nashpati"
+234 "berries"
+235 "leechi"
+236 "apple"
+237 "grapes"
+238 "other fresh fruits"
+239 "fruits (fresh): s.t. (220-238)"
+/* Fruits (dry) */
+240 "coconut: copra"
+241 "groundnut"
+242 "dates"
+243 "cashewnut"
+244 "walnut"
+245 "other nuts"
+246 "raisin, kishmish, monacca, etc."
+247 "other dry fruits"
+249 "fruits (dry): s.t. (240-247)"
+/*    Spices */
+250 "ginger (gm)"
+251 "garlic (gm)"
+252 "jeera (gm)"
+253 "dhania (gm)"
+254 "turmeric (gm)"
+255 "black pepper (gm)"
+256 "dry chillies (gm)"
+257 "tamarind (gm)"
+258 "curry powder (gm)"
+260 "oilseeds (gm)"
+261 "other spices (gm)"
+269 "spices: s.t. (250-261)"
+/*    Beverages  */
+270 "tea: cups (no.)"
+271 "tea: leaf (gm)"
+272 "coffee: cups (no.)"
+273 "coffee: powder (gm)"
+274 "mineral water (litre)"
+275 "cold beverages: bottled/canned (litre)"
+276 "fruit juice and shake (litre)"
+277 "other beverages: cocoa, chocolate, etc."
+279 "beverages: sub-total (270-277)"
+/*    Served processed food  */
+280 "cooked meals purchased (no.)"
+281 "cooked meals received free in workplace? (no.)"
+282 "cooked meals received as assistance (no.)"
+283 "cooked snacks purchased [samosa, puri, paratha, burger, chowmein, idli, dosa, vada, chops, pakoras, pao bhaji, etc.]"
+284 "other served processed food"
+289 "served processed food: sub-total(280-284)"
+/*    Packaged processed food  */
+290 "prepared sweets, cake, pastry "
+291 "biscuits, chocolates, etc. "
+292 "papad, bhujia, namkeen, mixture, chanachur"
+293 "chips (gm)"
+294 "pickles (gm)"
+295 "sauce, jam, jelly (gm)"
+296 "other packaged processed food "
+299 "packaged processed food: sub-total(290-296)"
+/*    Pan */
+300 "pan: leaf (no.)"
+301 "pan: finished (no.)"
+302 "ingredients for pan (gm)"
+309 "pan: s.t. (300-302)"
+/*    Tobacco */
+310 "bidi (no.)"
+311 "cigarettes (no.)"
+312 "leaf tobacco (gm)"
+313 "snuff (gm)"
+314 "hookah tobacco (gm)"
+315 "cheroot (no.)"
+316 "zarda, kimam, surti (gm)"
+317 "other tobacco products "
+319 "tobacco: s.t. (310-317)"
+/*    Intoxicants */
+320 "ganja (gm)"
+321 "toddy (litre)"
+322 "country liquor (litre)"
+323 "beer (litre)"
+324 "foreign/refined liquor or wine (litre)"
+325 "other intoxicants "
+329 "intoxicants: s.t. (320-325)"
+/*    Fuel and light */
+330 "coke "
+331 "firewood and chips "
+332 "electricity (std. unit)"
+333 "dung cake "
+334 "kerosene - PDS (litre)"
+335 "kerosene - other sources (litre)"
+336 "matches (box)"
+337 "coal"
+338 "LPG [excl. conveyance]"
+340 "charcoal "
+341 "candle (no.)"
+342 "gobar gas "
+343 "petrol (litre) [excl. conveyance]"
+344 "diesel (litre) [excl. conveyance]"
+345 "other fuel "
+349 "fuel and light: s.t. (330-345)"
+/*    clothing  */
+350 "dhoti (no.)"
+351 "saree (no.)"
+352 "cloth for shirt, pyjama, kurta, salwar, etc.(metre)"
+353 "cloth for coat, trousers, suit, etc. (metre)"
+354 "coat, jacket, sweater, windcheater (no.)"
+355 "shawl, chaddar (no.)"
+356 "school/college uniform: boys "
+357 "school/college uniform: girls "
+358 "kurta-pajama suits: males (no.)"
+360 "kurta-pajama suits: females (no.)"
+361 "kurta, kameez (no.)"
+362 "pajamas, salwar (no.)"
+363 "shirts, T-shirts (no.)"
+364 "shorts, trousers, bermudas (no.)"
+365 "frocks, skirts, etc. (no.)"
+366 "blouse, dupatta, scarf, muffler (no.)"
+367 "lungi (no.)"
+368 "other casual wear"
+370 "baniyan, socks, other hosiery and undergarments, etc. (no.)"
+371 "gamchha, towel, handkerchief (no.)"
+372 "infant clothing "
+373 "headwear, belts, ties (no.)"
+374 "knitting wool (gm)"
+375 "clothing (first-hand): other "
+376 "clothing: second-hand "
+379 "clothing: sub-total (350-376)"
+/*    Bedding */
+380 "bed sheet, bed cover (no.)"
+381 "rug, blanket (no.)"
+382 "pillow, quilt, mattress (no.)"
+383 "cloth for upholstery, curtains, tablecloth, etc. (metre)"
+384 "mosquito net (no.)"
+385 "bedding: others "
+389 "bedding, etc.: s.t. (380-385)"
+/*    Footwear */
+390 "leather boots, shoes"
+391 "leather sandals, chappals, etc."
+392 "other leather footwear"
+393 "rubber / PVC footwear"
+394 "other footwear"
+395 "footwear: second-hand"
+399 "footwear: sub-total (390-395)"
+/*    Education */
+400 "books, journals: first hand"
+401 "books, journals, etc.: second hand"
+402 "newspapers, periodicals"
+403 "library charges"
+404 "stationery, photocopying charges"
+405 "tuition and other fees (school, college, etc.)"
+406 "private tutor/ coaching centre "
+407 "educational CD "
+408 "other educational expenses (incl. fees for enrollment in web-based training)"
+409 "education: s.t. (400-408)"
+/*    Medical - institutional */
+410 "medicine"
+411 "X-ray, ECG, pathological test, etc."
+412 "doctor's/surgeon's fee"
+413 "hospital & nursing home charges"
+414 "other medical expenses "
+419 "medical - institutional: s.t. (410-414)"
+/*    Medical - non-institutional */
+420 "medicine "
+421 "X-ray, ECG, pathological test, etc. "
+422 "doctor's/surgeon's fee"
+423 "family planning devices "
+424 "other medical expenses "
+429 "medical - non-institutional: sub-total (420-424)"
+/*    Entertainment */
+430 "cinema, theatre "
+431 "mela, fair, picnic "
+432 "sports goods, toys, etc. "
+433 "club fees "
+434 "goods for recreation and hobbies "
+435 "photography "
+436 "VCD/ DVD hire (incl. instrument) "
+437 "cable TV "
+438 "other entertainment "
+439 "entertainment: sub-total (430-438)"
+/*    Minor durable-type goods */
+440 "spectacles "
+441 "torch "
+442 "lock "
+443 "umbrella, raincoat "
+444 "lighter (bidi/ cigarette/ gas stove) "
+445 "other minor durable-type goods "
+449 "minor durable-type goods: sub-total (440-445)"
+/* Toilet articles  */
+450 "toilet soap"
+451 "toothpaste, toothbrush, comb, etc."
+452 "powder, snow, cream, lotion and perfume"
+453 "hair oil, shampoo, hair cream"
+454 "shaving blades, shaving stick, razor"
+455 "shaving cream, aftershave lotion"
+456 "sanitary napkins "
+457 "other toilet articles"
+459 "toilet articles: sub-total (450-457)"
+/*  Other household consumables */
+460 "electric bulb, tubelight"
+461 "electric batteries"
+462 "other non-durable electric goods"
+463 "earthenware"
+464 "glassware"
+465 "bucket, water bottle/ feeding bottle & other plastic goods"
+466 "coir, rope, etc."
+467 "washing soap/soda/powder"
+468 "other washing requisites"
+470 "incense (agarbatti), room freshener"
+471 "flower (fresh): all purposes"
+472 "mosquito repellent, insecticide, acid etc."
+473 "other petty articles"
+479 "other household consumables: sub-total (460-473)"
+/*    Consumer services excluding conveyance */
+480 "domestic servant/cook "
+481 "attendant "
+482 "sweeper "
+483 "barber, beautician, etc. "
+484 "washerman, laundry, ironing "
+485 "tailor "
+486 "grinding charges "
+487 "telephone charges: landline"
+488 "telephone charges: mobile "
+490 "postage & telegram "
+491 "miscellaneous expenses "
+492 "priest "
+493 "legal expenses "
+494 "repair charges for non-durables "
+495 "pet animals (incl. birds, fish) "
+496 "internet expenses "
+497 "other consumer services excluding conveyance"
+499 "consumer services excluding conveyance: sub-total (480-497)"
+/*    Conveyance  */
+500 "air fare"
+501 "railway fare"
+502 "bus/tram fare"
+503 "taxi, auto-rickshaw fare"
+504 "steamer, boat fare"
+505 "rickshaw (hand drawn & cycle) fare"
+506 "horse cart fare"
+507 "porter charges"
+508 "petrol for vehicle"
+510 "diesel for vehicle"
+511 "lubricants & other fuels for vehicle"
+512 "school bus, van, etc."
+513 "other conveyance expenses"
+519 "conveyance: sub-total (500-513)"
+/*    Rent */
+520 "house rent, garage rent (actual)"
+521 "hotel lodging charges"
+522 "residential land rent"
+523 "other consumer rent"
+529 "rent: sub-total (520-523)"
+/*    Consumer taxes and cesses */
+539 "house rent, garage rent (imputed-urban only)"
+540 "water charges "
+541 "other consumer taxes & cesses "
+549 "consumer taxes and cesses: sub-total (540-541)"
+/*    Furniture & fixtures */
+550 "bedstead"
+551 "almirah, dressing table"
+552 "chair, stool, bench, table"
+553 "suitcase, trunk, box, handbag and other travel goods"
+554 "foam, rubber cushion"
+555 "carpet, daree & other floor mattings"
+556 "paintings, drawings, engravings, etc."
+557 "other furniture & fixtures (couch, sofa, etc.)"
+559 "furniture & fixtures: sub-total (550-557)"
+/*    Goods for recreation */
+560 "radio, tape recorder, 2-in-1"
+561 "television"
+562 "VCR/VCD/DVD player"
+563 "camera & photographic equipment"
+564 "CD, DVD, etc"
+565 "musical instruments"
+566 "other goods for recreation"
+569 "goods for recreation: sub-total (560-566)"
+/*    Crockery & utensils */
+570 "stainless steel utensils"
+571 "other metal utensils"
+572 "casseroles, thermos, thermoware"
+573 "other crockery & utensils"
+579 "crockery & utensils: sub-total (570-573)"
+/*    Cooking and household appliances */
+580 "electric fan"
+581 "air conditioner, air cooler"
+582 "inverter"
+583 "lantern, lamp, electric lampshade"
+584 "sewing machine"
+585 "washing machine"
+586 "stove, gas burner"
+587 "pressure cooker/ pressure pan"
+588 "refrigerator"
+590 "water purifier"
+591 "electric iron, heater, toaster, oven & other electric heating appliances"
+592 "other cooking/ household appliances"
+599 "cooking & other household appliances: sub-total (580-592)"
+/*    Personal transport equipment */
+600 "bicycle"
+601 "motor cycle, scooter"
+602 "motor car, jeep"
+603 "tyres & tubes"
+604 "other transport equipment"
+609 "personal transport equipment: sub-total (600-604)"
+/*    Therapeutic appliances  */
+610 "contact lenses, hearing aids & orthopaedic equipment"
+611 "other medical equipment"
+619 "therapeutic appliances: sub-total (610-611)"
+/*    Other personal goods */
+620 "clock, watch"
+621 "other machines for household work"
+622 "PC/ Laptop/ other peripherals incl. software"
+623 "mobile handset"
+624 "telephone instrument (landline)"
+625 "any other personal goods "
+629 "other personal goods: sub-total (620-629)"
+/*    Residential building , land and other durables */
+630 "bathroom and sanitary equipment"
+631 "plugs, switches & other electrical fittings"
+632 "residential building & land (cost of repairs only)"
+633 "other durables (specify)"
+639 "residential building, land and other durables: sub-total (630-633)"
+/*    Jewellery & ornaments */
+640 "gold ornaments"
+641 "silver ornaments"
+642 "jewels, pearls"
+643 "other ornaments"
+649 "jewellery & ornaments: sub-total (640-643)"
+659 "durable goods: total (559+569+579+599+609+619+629+639+649)";
+	la val src_cod src_cod;
+# delimit cr

@@ -1,0 +1,492 @@
+**
+*** Generate commodity-level file  
+**
+*Food consumption: recall period last week
+use "$dirdata\susenas10feb_41.dta", clear
+gen double ori_hid=b1r1*10^12 + b1r2*10^10 + b1r3*10^7 + b1r7*10^2 + b1r8
+format ori_hid %15.0f
+
+ren kode src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (1=.)(2 3=4)(4/9=5)(10=.)(11/16=31)(17/19=32)(20=.)(21/39=16)(40/52=17)(53=.)(54 55=10)
+	(56=12)(57=11)(58 59=13)(60/70=14)(71=.)(72/77=22)(78=19)(79/82=20)(83=21)(84=18)
+	(85=.)(86/92=30)(93=32)(94/100=30)(101=32)(102/112=30)(113=32)(114=29)(115=.)(116/121=30)
+	(122/126=32)(127=.)(128/148=27)(149 150=28)(151=.)(152/154=25)(155 156=24)(157=23)(158=.)
+	(159 160=34)(161 162=39)(163 164=36)(165 166=40)(167=.)(168/180=37)(181=.)(182/185=8)
+	(186/190=37)(191=.)(192 193=6)(194 195=7)(196/205=136)(206=8)(207/210=136)(211/219=40)
+	(220=45)(221=44)(222=43)(223=.)(224/227=46)(228=47)(229=46), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+tempfile def
+save `def'
+
+collapse (sum) b41k5 b41k7, by(ori_hid src_cod icp_seq)
+
+/* self produced or received as gift has been aggregated as self-produced */
+gen cons_csh=b41k5
+gen cons_hmp=b41k7
+gen cons_gft=0
+
+*Annualization
+replace cons_csh=cons_csh * 52
+replace cons_hmp=cons_hmp * 52
+
+recode cons_csh cons_hmp cons_gft (.=0)
+egen double cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="kode-" + string(src_cod) 
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile food
+save `food' 
+
+*EXPENDITURES FOR NON-FOOD GOODS IN THE LAST MONTH AND LAST 12 MONTHS
+use "$dirdata\susenas10feb_42.dta", clear
+gen double ori_hid=b1r1*10^12 + b1r2*10^10 + b1r3*10^7 + b1r7*10^2 + b1r8
+format ori_hid %15.0f
+
+destring  kode, replace
+ren kode src_cod
+* Map source item codes to ICP basic headings
+# delimit ;
+recode src_cod (230 231=.)(232/235=57)(236=58)(237=.)(238=63)(239=.)(240=60)(241=.)(242=64)(243=.)
+	(244=64)(245=.)(246=65)(247=.)(248=65)(249=.)(250 251=65)(252=.)(253 254=65)(255=81)
+	(256/258=116)(259=114)(260=116)(261=.)(262 263=141)(264=140)(265=81)(266=83)(267=133)
+	(268=81)(269/272=95)(273/275=94)(276/278=87)(279=89)(280/284=95)(285/287=135)(288 289=133)
+	(290=135)(291=.)(292=103)(293=.)(294=103)(295=.)(296=103)(297=104)(298=106)(299=129)
+	(300=82)(301=150)(302=151)(303=.)(304/307=51)(308=52)(309=54)(310=50)(311=48)(312=.)
+	(313=68)(314=73)(315=67)(316=72)(317=76)(318=68)(319=70)(320=115)(321=143)(322=145)
+	(323=144)(324=145)(325=118)(326=126)(327=96)(328=125)(329=77)(330/332=.)(333=151)
+	(334 335=147)(336/338=.)(339=151)(340=.)(341=137)(342 343=.), gen(icp_seq);
+# delimit cr
+drop if icp_seq==. | icp_seq > 153
+
+
+collapse (sum) b42k4, by(ori_hid src_cod icp_seq)
+gen cons_csh=b42k4  /* both monthly and annual expenses are given, in the aggregation we take the annual expenses */
+gen cons_hmp=0
+gen cons_gft=0
+
+recode cons_csh cons_hmp cons_gft (.=0)
+egen double cons_tot=rsum(cons_csh cons_hmp cons_gft)
+keep if cons_tot > 0 & cons_tot~=.
+gen src_var ="kode-" + string(src_cod) 
+keep ori_hid src_cod icp_seq src_var cons_csh cons_hmp cons_gft cons_tot
+sort ori_hid
+tempfile nfd
+save `nfd' 
+
+* calculating regional Paachse price index using food consumption items by urban/rural
+use `def', clear
+preserve
+keep ori_hid src_cod b41k4 b41k5
+ren b41k4 qty
+ren b41k5 value
+tempfile pursh
+save `pursh'
+
+restore
+keep ori_hid src_cod b41k6 b41k7
+ren b41k6 qty
+ren b41k7 value
+append using `pursh'
+
+sort ori_hid
+merge ori_hid using "$filehhr", keep(geo_1 rururb)
+tab _
+drop if _ ~=3
+drop _
+
+recode qty value (0=.)
+gen uv=value/qty 
+egen uv3=median(uv), by(geo_1 rururb src_cod) 
+egen uv2=median(uv), by(rururb src_cod) 
+egen uv4=median(uv), by(src_cod)
+
+replace uv3=uv2 if uv3==.
+replace uv3=uv4 if uv3==.
+replace uv3=uv4 if uv3 > 5*uv4 | uv3 < uv4/5
+
+* Total household consumption
+egen totcons=sum(value), by(ori_hid) 
+gen wi=value/totcons /* Share of each item */
+gen pindex=wi * uv3/uv4
+
+* Paachse price index for each household
+collapse (sum) pindex, by(ori_hid geo_1 rururb)
+
+* Regional price deflator based on Paachse price indexes
+collapse (median) pindex, by(geo_1 rururb)
+rename pindex reg_defl
+summ reg_defl
+
+sort geo_1 rururb
+save `def', replace
+
+****MERGING FILES*********
+use `food', clear
+append using `nfd'
+
+**Add source item value label
+#delimit;
+la def src_cod
+	1 "A. GRAINS [R2-R9]"
+	2 "Rice (local, super quality, import)"
+	3 "Glutinous rice "
+	4 "Fresh corn with skin"
+	5 "Corn grains"
+	6 "Rice flour"
+	7 "Corn flour (cornmeal)"
+	8 "Wheat flour"
+	9 "Other (specify):"
+	10 "B. TUBERS (R11-R19)"
+	11 "Cassava"
+	12 "Sweet potato"
+	13 "Sago (non-cassava)"
+	14 "Taro"
+	15 "Potato"
+	16 "Gaplek"
+	17 "Gaplek flour (tiwul)"
+	18 "Cassava flour (tapioca)"
+	19 "Other (specify):"
+	20 "C. FISH / SHRIMP / SQUID / OYSTER [R.21-R.52]"
+			/* Fresh Fish */	
+	21 "Yellowtail"
+	22 "Tuna (tongkol/cangkalang)"
+	23 "Spanish Mackerel"
+	24 "Scad (Selar)"
+	25 "Indian Mackerel"
+	26 "Tiny sea fish"
+	27 "Milkfish"
+	28 "Snakehead murrel (gabus)"
+	29 "Mujair"
+	30 "Goldfish"
+	31 "Catfish"
+	32 "Sea bream (kakap)"
+	33 "Baronang"
+	34 "Other (specify):"
+			/* Fresh shrimp and other water animals */	
+	35 "Shrimp"
+	36 "Squid/sotong"
+	37 "Crab/ketam/rajungan"
+	38 "Oyster/mollusk"
+	39 "Other (specify):"
+			/* Salted/preserved fish */	
+	40 "Indian Mackerel/Peda"
+	41 "Spanish Mackerel"
+	42 "Tuna (tongkol/cangkalang)"
+	43 "Tiny sea fish (teri)"
+	44 "Scad (Selar)"
+	45 "Sepat"
+	46 "Milkfish"
+	47 "Snakehead murrel"
+	48 "Canned fish"
+	49 "Other (specify):"
+			/*  Preserved shrimp and other water animals */	
+	50 "Shrimp (ebi)"
+	51 "Squid/sotong"
+	52 "Other (specify):"
+	53 "D. MEAT [R.54-R.70]"
+			/*  Fresh meat */	
+	54 "Beef"
+	55 "Buffalo"
+	56 "Mutton"
+	57 "Pork"
+	58 "Purebred chicken"
+	59 "Free-range chicken"
+	60 "Other poultry"
+	61 "Other meat (specify):"
+			/* Preserved meat */	
+	62 "Sun-dried meat"
+	63 "Shredded meat"
+	64 "Canned meat"
+	65 "Other meat (specify):"
+			/*  Others */	
+	66 "Liver"
+	67 "Entrails (other than liver)"
+	68 "Tetelan "
+	69 "Bone"
+	70 "Others (specify):"
+	71 "E. EGG AND MILK [R.72-R.84]"
+	72 "Purebred chicken egg"
+	73 "Free-range chicken egg"
+	74 "Duck/manila duck egg"
+	75 "Quail egg"
+	76 "Other egg"
+	77 "Salted egg"
+	78 "Fresh milk"
+	79 "Manufactured liquid milk"
+	80 "Sweetened condensed milk"
+	81 "Milk powder "
+	82 "Baby milk powder"
+	83 "Cheese"
+	84 "Other products from milk (specify):"
+	85 "F. VEGETABLES [R.86-R.114]"
+	86 "Spinach"
+	87 "Collard"
+	88 "Cabbage"
+	89 "Chinese cabbage"
+	90 "Mustard greens"
+	91 "Green bean"
+	92 "Long-podded cowpea"
+	93 "Cooked tomato"
+	94 "Carrot"
+	95 "Cucumber"
+	96 "Cassava leaf"
+	97 "Eggplants"
+	98 "Sprouts"
+	99 "Gourd "
+	100 "Young corn"
+	101 "Soup/capcay"
+	102 "Sayur asam/Lodeh"
+	103 "Young jackfruit"
+	104 "Young papaya"
+	105 "Mushroom"
+	106 "Petai (Parkia speciosa)"
+	107 "Jengkol (Pithecolobium)"
+	108 "Red onion "
+	109 "Garlic"
+	110 "Red pepper"
+	111 "Green pepper"
+	112 "Green chili"
+	113 "Canned vegetable"
+	114 "Others(specify):"
+	115 "G. LEGUMES [R.116 – R.126]"
+	116 "Peanut without hull"
+	117 "Peanut with hull"
+	118 "Soybeans"
+	119 "Mung bean"
+	120 "Cashew "
+	121 "Other peas (specify):"
+	122 "Tofu"
+	123 "Tempe (fermented soybean cake)"
+	124 "Tauco (fermented soybean paste)"
+	125 "Oncom (fermented soybean sediment)"
+	126 "Other (specify):"
+	127 "H. FRUITS [R.128-R.150]"
+	128 "Orange"
+	129 "Mango"
+	130 "Apple"
+	131 "Avocado "
+	132 "Rambutan"
+	133 "Lanseh"
+	134 "Durian"
+	135 "Zalacca"
+	136 "Pineapple"
+	137 "Ambon banana"
+	138 "Raja banana"
+	139 "Other banana (specify):"
+	140 "Papaya"
+	141 "Rose-apple"
+	142 "Sapodilla "
+	143 "Starfruit"
+	144 "Kedondong"
+	145 "Watermelon"
+	146 "Melon"
+	147 "Jackfruit"
+	148 "Eaten raw tomato"
+	149 "Canned fruit"
+	150 "Other (Specify):"
+	151 "I. OIL AND FAT [R.152-R.157]"
+	152 "Coconut oil"
+	153 "Corn oil"
+	154 "Other cooking oil"
+	155 "Coconut"
+	156 "Margarine"
+	157 "Others (specify):"
+	158 "J. BEVERAGE ingredients [R.159-R.166]"
+	159 "Granulated sugar"
+	160 "Brown sugar (including liquid sugar)"
+	161 "Tea"
+	162 "Coffee (powder, seed, instant)"
+	163 "Instant chocolate"
+	164 "Powdered chocolate"
+	165 "Syrup"
+	166 "Other (specify):"
+	167 "K. SPICES [R.168 – R.180]"
+	168 "Salt"
+	169 "Candlenut"
+	170 "Coriander / caraway seed"
+	171 "Pepper"
+	172 "Tamarind"
+	173 "Nutmeg seed"
+	174 "Clove"
+	175 "Terasi/petis"
+	176 "Soybean sauce"
+	177 "Flavoring/vetsin"
+	178 "Chili sauce/tomato sauce"
+	179 "Packed spices "
+	180 "Other spices (specify):"
+	181 "L. OTHER CONSUMPTION [R.182 – R.190]"
+	182 "Instant noodles"
+	183 "Wet noodles"
+	184 "Rice noodles"
+	185 "Macaroni/dried noodles"
+	186 "Fish/shrimp chips (kerupuk)"
+	187 "Belinjo chips (emping) "
+	188 "Gelatin"
+	189 "Packed baby food"
+	190 "Others (specify):"
+	191 "M. READY-MADE FOOD AND BEVERAGES"
+	192 "Bread"
+	193 "Sweet bread/other breads"
+	194 "Cookies/biscuit/semprong"
+	195 "Steamed cake"
+	196 "Fried food"
+	197 "Mung bean stew"
+	198 "Gado/gado/ketoprak/pecel"
+	199 "Nasi campur/rames"
+	200 "Fried rice"
+	201 "Pure rice (excluding side dish) "
+	202 "Lontong/Ketupat sayur"
+	203 "Soto/curry/soup/rawon/cincang"
+	204 "Kebab/tongseng"
+	205 "Meatball noodle/boiled noodle/fried noodle"
+	206 "Instant noodle"
+	207 "Children snacks/chips"
+	208 "Fish (fried, roasted, presto, pindang, pepes, etc)"
+	209 "Chicken/meat (fried, roasted, etc)"
+	210 "Other ready-made food (specify):"
+			/*  Non-alcohol beverages */	
+	211 "Packaged water"
+	212 "Gallon-packed water"
+	213 "Packed tea water"
+	214 "Packed juice"
+	215 "Soft drink containing CO2 (soda)"
+	216 "Energy drink"
+	217 "Other beverages (coffee, milk coffee, tea, chocolate milk, etc.)"
+	218 "Ice cream"
+	219 "Other ice (specify)"
+			/* Alcohol beverages */	
+	220 "Beer"
+	221 "Wine"
+	222 "Other alcohol beverages"
+	223 "N. TOBACCO AND BETEL NUT [R.224-R.229]"
+	224 "Filter clove cigarettes"
+	225 "Non-filter clove cigarettes"
+	226 "White cigarettes"
+	227 "Tobacco"
+	228 "Betel nut/pan"
+	229 "Other (specify)"
+	230 "A. Housing and Household Facilities [R.231-R.260]"
+	231 "Ownership status of residence being occupied"
+	232 "In the case of own / rent-free house, an estimated monthly rent is Rp "
+	233 "In the case of leased house, the average monthly lease is Rp "
+	234 "In the case of rented house, the monthly rent is Rp"
+	235 "In the case of Company’s or other house, the estimated monthly rent is: Rp"
+	236 "House maintenance and minor repair (wood paint, lime-paint, wall paint, roof, window glass, hinges, etc including labor)"
+	237 "Electricity Volume: Last Month in  Kwh                                               "
+	238 " Electricity: Value"
+	239 "Water (PAM/retail purchase): Volume Last Month in  m³"
+	240 "Water (PAM/retail purchase): Value"
+	241 "LPG Volume:  Last Month in  Kg"
+	242 "LPG Value"
+	243 "Urban Gas Volume: Last Month in m³"
+	244 "Urban Gas Value:"
+	245 "Kerosene Volume: Last Month in liters"
+	246 "Kerosene Value"
+	247 "Generator Type and volume of fuel oil (BBM):  Volume Last Month in  Liters"
+	248 "Generator fuel oil: Value"
+	249 "Generator Lubricant: Volume Last Month in  Liters "
+	250 "Generator Value:"
+	251 "Generator Maintenance and repair"
+	252 "Charcoal/coal/briquette:  Last Month in  Kg"
+	253 "Charcoal/coal/briquette: Value"
+	254 "Firewood and other fuels"
+	255 "Others (batteries, storage batteries, matches, mosquito repellent, light-bulb,  room fragrance, floor cleaner, etc)"
+			/* Post and Telecommunications */	
+	256 "Home telephone bill"
+	257 "Hand-phone bill, number"
+	258 "Telephone card/public telephone/telecommunications café "
+	259 "Postage items (money order, revenue stamp, postage stamp, etc)"
+	260 "Other (Internet Café, Internet, etc)"
+	261 "B. Miscellaneous Goods and Services [R.262-R.302]"
+	262 "Bath soap, toothpaste, toothbrush, and shampoo"
+	263 "Beauty items (perfume, hair oil, deodorant, powder, orthodontic braces, nail clippers, wig, lipstick, comb, etc) , and sanitary napkins"
+	264 "Skin, facial, nail and hair care (haircut, curling, rebounding, cream bath, spa, etc.)"
+	265 "Washing soap (block, powder, cream and liquid)"
+	266 "Clothing maintenance agents (softener and perfume, bleach, smoother, camphor and others)"
+	267 "Newspaper, magazine, books and stationery (other than school and course purposes) including rental of magazines/readings "
+	268 "Other goods (tissue, napkins, skewers, etc.)"
+			/* Medical/Curative Costs (including childbirth and drugs that cannot be detailed) */	
+	269 "Government Hospitals"
+	270 "Private Hospitals"
+	271 "Puskesmas/Pustu/Polindes/Posyandu"
+	272 "Medical Practitioners/Policlinics (including practitioners in private policlinics and Government Hospitals)"
+	273 "Practicing Health Workers (Midwives/Nurses/medical aide)"
+	274 "Traditional Treatment"
+	275 "Traditional birth attendant"
+			/* Drug Costs (only for drugs purchased from pharmacies, drugstores, etc.) */	
+	276 "Purchase of drugs prescribed by health workers (doctors, midwives, etc)"
+	277 "Modern drugs purchased without prescription from health workers "
+	278 "Traditional medicines/herbs"
+	279 "Purchase of eyeglasses, prostheses and wheelchairs  "
+			/* Preventive Costs */	
+	280 "Pregnancy checks"
+	281 "Immunization "
+	282 "KIR / Medical Checkup"
+	283 "Family Planning"
+	284 "Other healthcare costs (vitamin, herb, massage, fitness, etc)"
+			/* School/Course Fees */	
+	285 "School development contributions (admission fees)"
+	286 "School fees (SPP) and BP3/POMG contributions"
+	287 "Other school fees (proficiency, course, tests, etc)"
+	288 "Textbooks, photocopies of learning materials"
+	289 "Stationery (pen, pencil, eraser, ruler, calculator, dividers, etc)"
+	290 "Course fees"
+	291 "Fuel, minor repair and maintenance of motor vehicles:  Gasoline / pertamax liters "
+	292 "Fuel, minor repair and maintenance of motor vehicles :  Gasoline / pertamax value"
+	293 "Fuel, minor repair and maintenance of motor vehicles: Diesel fuel liters                              "
+	294 "Fuel, minor repair and maintenance of motor vehicles: Diesel fuel value"
+	295 "Fuel, minor repair and maintenance of motor vehicles: Lubricant liters                                    "
+	296 "  Fuel, minor repair and maintenance of motor vehicles: Lubricant Value"
+	297 "Minor repair and maintenance of motor vehicles (brake oil, distilled battery water, battery, brake shoes, couplings, etc.)"
+	298 "Public transport (bus, train, airplane, ship, pedicab, parking charges, road toll, etc)."
+	299 "Hotel, inn, theatre, play, sports, decoder, TV cable/Indovision and other recreation (excluding transport and purchase of goods for recreational purposes)"
+	300 "Domestic servant, security, gardener and driver (salary or wage)"
+	301 "Financial institution services (ATM services, credit card services, transfer fees, etc)"
+	302 "Other services (I.D. Card, Driving License, birth certificate, photocopies, photographs, etc)"
+	303 "C. Clothing, Footwear and Head Covering [R.304-R.311]"
+	304 "Garments for adult men (suits, uniforms, shirts, jacket, sarong, trousers, singlet, underwear, etc.)"
+	305 "Garments for adult women (uniforms, gowns, long cloth, blouses, blazers, lounging gowns, sweaters, skirts, sarongs, scarves, waistband, underwear, etc.)"
+	306 "Garments for children (uniforms, shirts, trousers, sweaters, T-shirts, underwear, diapers, etc.)"
+	307 "Cloth for men, women and children (wool, polyester, cotton, silk, etc)"
+	308 "Fees for sewing, repairing clothes, thread, and other items for sewing purposes"
+	309 "Footwear (shoes, sandals, socks, etc.)"
+	310 "Head coverings for men, women and children (hats, caps, veils, etc)"
+	311 "Other (towels, leather belts, shoe polish, ties, laundry, clothes hangers, etc.)"
+	312 "D. Durable Goods [R.313-R.329]"
+	313 "Furniture (tables, chairs, beds, wardrobes, showcases, display shelves, mirrors, cupboards, baby beds, etc)"
+	314 "Household equipment (sewing machine, refrigerator, fan, washing machine, AC, etc)"
+	315 "Household appliances (mattress, pillows, tablecloth, bed sheet, ashtray, pillowcase, blanket, mats, curtains, rugs, etc)"
+	316 "Household tools (iron, brooms, scissors, knives, machetes, hoes, saws, vacuum cleaner, clothes hangers, solder, etc.)"
+	317 "Kitchen ware (kitchen cupboards, stoves, caldrons, pans, pails, knives, frying pans, spoons, thermos flasks, plates, glasses, mixer, rice cooker, blender, microwave, oven, and other crockery made of glass/ceramic/melamine/plastic etc.)"
+	318 "Decorative items (wall decoration, aquarium, decorations from ceramic, porcelain, onyx, marble, wood, etc.)"
+	319 "Furniture repair, equipment and household devices"
+	320 "Hand-phone and accessories, including repair"
+	321 "Watch, clock, camera, eyeglasses, video camera, other optical devices and repair"
+	322 "Umbrella, bags, briefcases, and supplies"
+	323 "Expensive jewelry made from metal and precious stone (gold, diamonds, pearls, etc) and repair"
+	324 "Children toys and repair, low-cost imitation jewelry"
+	325 "Television set, radio, video, DVD, cassette, radio tape, guitar, piano/organ, computer and repair"
+	326 "Sport equipment and supplies (chess, rackets, balls, nets, bat, stick, including swimsuit, roller skates, swimming spectacles) and repair"
+	327 "Vehicles (car, motorcycle, bicycle, etc) and major repair"
+	328 "Pet animals and plants including keeping costs"
+	329 "Other durable goods (electricity/telephone/water installations, swings, baby carriage, etc) and repair"
+	330 "E. Tax, Fees and Insurance [R.331-R.336]"
+	331 "Property tax (PBB)"
+	332 "Motor vehicle and non-motor taxes"
+	333 "Fees/retribution (RT/RW fees, garbage, security, funeral, parking etc)"
+	334 "Health Insurance"
+	335 "Other life insurance and non-life insurance (death, accident, car, house insurance, etc)"
+	336 "Other (ticketing, income tax, etc)"
+	337 "F. Party and Ceremonial Purposes [R.338-R.343]"
+	338 "Wedding (rentals such as bride equipment, chairs, tents, plates, services such as bride makeup, penghulu, and building rental, etc)"
+	339 "Circumcision and birthday (circumciser, doctor/medical aide/dukun, boxed food, room decorators/balloons, chair rental, entertainment)"
+	340 "Religious ceremonies (chair rental, tent rental, etc)"
+	341 "Pilgrimage to Mecca (ONH)"
+	342 "Religious or other traditional ceremonies (speech by Ustadz, Christian clergymen, sesajen, etc)"
+	343 "Funeral (corpse bathing, shroud, grave digging, coffin, crematorium fees, ngaben (cremation), etc)";
+la val src_cod src_cod;
+#delimit cr
