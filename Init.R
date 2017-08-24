@@ -1,7 +1,9 @@
 # This file needs to be run once at the very beginning of an analysis
 
-setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/")
-code_path <- "C:/Users/tudeschi/Documents/DLE_scripts/"
+#setwd("C:/Users/tudeschi/SharePoint/DLE - Documents/WS2 - Documents/Analysis/IO/")
+setwd("C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/IO/")
+code_path <- "C:/Users/tudeschi/OneDrive - IIASA/Projects/DLE_scripts_Git/"
+
 
 #################
 ### Constants ###
@@ -24,33 +26,37 @@ options(digits=3)
 # Need this PPP rate to go back to local currency in 2010
 # [LCU/$]
 PPP_cty = WDI(country = c("IN", "BR"), indicator = c("PA.NUS.PPP", "PA.NUS.PRVT.PP"), start = 2010, end = 2010, extra = FALSE, cache = NULL) # Load PPP conversion rates from WB database
-PPP_IND <- as.numeric(PPP_cty %>% filter(country=="India") %>% select(PA.NUS.PRVT.PP) )
-PPP_BRA <- as.numeric(PPP_cty %>% filter(country=="Brazil") %>% select(PA.NUS.PRVT.PP) )
+PPP_IND <- as.numeric(PPP_cty %>% filter(country=="India") %>% dplyr::select(PA.NUS.PRVT.PP) )
+PPP_BRA <- as.numeric(PPP_cty %>% filter(country=="Brazil") %>% dplyr::select(PA.NUS.PRVT.PP)) ## select was conflicting with other package
+
+
+
+
 
 # Inflation
 # Deflate currency in 2010 to 2007 (EXIO)
 CPI <- WDI(country = c("IN", "BR", "FR"), indicator = "FP.CPI.TOTL", start = 2007, end = 2010, extra = FALSE, cache = NULL)
 
-CPI_ratio_IND <- as.numeric(CPI %>% filter(year==2010 & iso2c=='IN') %>% select(FP.CPI.TOTL) / CPI %>% filter(year==2007 & iso2c=='IN') %>% select(FP.CPI.TOTL))
-CPI_ratio_BRA <- as.numeric(CPI %>% filter(year==2010 & iso2c=='BR') %>% select(FP.CPI.TOTL) / CPI %>% filter(year==2007 & iso2c=='BR') %>% select(FP.CPI.TOTL))
+CPI_ratio_IND <- as.numeric(CPI %>% filter(year==2010 & iso2c=='IN') %>% dplyr::select(FP.CPI.TOTL) / CPI %>% filter(year==2007 & iso2c=='IN') %>% dplyr::select(FP.CPI.TOTL))
+CPI_ratio_BRA <- as.numeric(CPI %>% filter(year==2010 & iso2c=='BR') %>% dplyr::select(FP.CPI.TOTL) / CPI %>% filter(year==2007 & iso2c=='BR') %>% dplyr::select(FP.CPI.TOTL))
 
 
 # Exchange rate (MEUR) [LCU/$]
 EXR_EUR <- WDI(country = "XC", indicator = "PA.NUS.FCRF", start = 2007, end = 2007, extra = FALSE, cache = NULL) # XC == euro zone
 EXR_EUR <- EXR_EUR %>% rename(r=PA.NUS.FCRF)
 EXR_cty <- WDI(country = c("IN", "BR"), indicator = "PA.NUS.FCRF", start = 2007, end = 2007, extra = FALSE, cache = NULL)
-EXR_IND <- as.numeric(EXR_cty %>% filter(country=="India") %>% select(PA.NUS.FCRF))
-EXR_BRA <- as.numeric(EXR_cty %>% filter(country=="Brazil") %>% select(PA.NUS.FCRF))
+EXR_IND <- as.numeric(EXR_cty %>% filter(country=="India") %>% dplyr::select(PA.NUS.FCRF))
+EXR_BRA <- as.numeric(EXR_cty %>% filter(country=="Brazil") %>% dplyr::select(PA.NUS.FCRF))
 
 # HH Consumption in India 2007 [US$]
 HH_CON <- WDI(country = c("IN", "BR"), indicator = c("NE.CON.PETC.CD", "NE.CON.PRVT.CD", "NE.CON.PETC.CN", "NE.CON.PRVT.KD"), 
               start = 2004, end = 2011, extra = FALSE, cache = NULL)
-BRA_con_grwth <- as.numeric(HH_CON %>% filter(year==2008 & iso2c=='BR') %>% select(NE.CON.PRVT.KD) / 
-                              HH_CON %>% filter(year==2007 & iso2c=='BR') %>% select(NE.CON.PRVT.KD)) # consumption growth between 2007 and 2008 >>> Why 2008?
-IND_con_grwth <- as.numeric(HH_CON %>% filter(year==2011 & iso2c=='IN') %>% select(NE.CON.PRVT.KD) / 
-                              HH_CON %>% filter(year==2007 & iso2c=='IN') %>% select(NE.CON.PRVT.KD))
-IND2_con_grwth <- as.numeric(HH_CON %>% filter(year==2004 & iso2c=='IN') %>% select(NE.CON.PRVT.KD) / 
-                              HH_CON %>% filter(year==2007 & iso2c=='IN') %>% select(NE.CON.PRVT.KD))
+BRA_con_grwth <- as.numeric(HH_CON %>% filter(year==2008 & iso2c=='BR') %>% dplyr::select(NE.CON.PRVT.KD) / 
+                              HH_CON %>% filter(year==2007 & iso2c=='BR') %>% dplyr::select(NE.CON.PRVT.KD)) # consumption growth between 2007 and 2008 >>> Why 2008?
+IND_con_grwth <- as.numeric(HH_CON %>% filter(year==2011 & iso2c=='IN') %>% dplyr::select(NE.CON.PRVT.KD) / 
+                              HH_CON %>% filter(year==2007 & iso2c=='IN') %>% dplyr::select(NE.CON.PRVT.KD))
+IND2_con_grwth <- as.numeric(HH_CON %>% filter(year==2004 & iso2c=='IN') %>% dplyr::select(NE.CON.PRVT.KD) / 
+                              HH_CON %>% filter(year==2007 & iso2c=='IN') %>% dplyr::select(NE.CON.PRVT.KD))
 
 # WDI(country = c("IN", "BR"), indicator = c("NE.IMP.GNFS.ZS", "NE.EXP.GNFS.ZS"), start = 2007, end = 2007, extra = FALSE, cache = NULL)
 
@@ -70,6 +76,7 @@ names(icp_ntnu)[2:3] <- c("COICOP1","COICOP2")
 names(icp_ntnu)[5] <- "ICP_Heading"
 
 source(paste0(code_path, "Process_WB.R"))  # Read in the function 'processWBscript' and resulting mtxs for 4 countries
+## Better run Process_WB.R directly
 
 # Issue: I still need to match with our CES DB and final NTNU 109 classification
 #        How to combine fuel consumption and other (food etc)
